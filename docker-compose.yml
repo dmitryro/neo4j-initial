@@ -13,6 +13,8 @@ services:
       - "7687:7687/tcp"
     volumes:
       - ./neo4j:/neo4j
+    networks:
+        - neo4j_net
     deploy:
       replicas: 1
 
@@ -26,6 +28,8 @@ services:
     image: confluentinc/cp-kafka:latest
     ports:
       - "29092:29092/tcp"
+    networks:
+        - neo4j_net
     deploy:
       replicas: 1
 
@@ -37,5 +41,32 @@ services:
     image: confluentinc/cp-zookeeper:latest
     ports:
       - "32181:32181/tcp"
+    networks:
+        - neo4j_net
     deploy:
       replicas: 1
+
+  slackbot:
+    container_name: ${PROJECT}-slack-bot
+    build: ./slackbot
+    env_file:
+      - .env
+    networks:
+        - neo4j_net
+    command: python run.py
+
+
+  lex:
+    container_name: ${PROJECT}-lex
+    build: ./lex
+    ports:
+      - "8888:8888/tcp"
+    env_file:
+      - .env
+    networks:
+        - neo4j_net
+    command: python run.py
+
+networks:
+  neo4j_net:
+    driver: bridge

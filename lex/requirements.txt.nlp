@@ -1,0 +1,16 @@
+neo4j
+CoreNLP
+corenlp-pywrap
+corenlp-xml
+corenlp-xml-reader
+nltk
+pycorenlp
+pynlp
+PyStanfordDependencies
+pytorch-mirror
+pytorch-models
+siren-pytorch
+stanford-corenlp
+stanfordcorenlp
+textblob
+
