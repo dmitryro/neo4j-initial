@@ -54,6 +54,7 @@ services:
       - .env
     depends_on:
       - daemon
+      - redis
     command: python run.py
 
 
@@ -79,6 +80,7 @@ services:
       - .env
     depends_on:
       - kafka
+      - redis
     volumes:
       - './daemon/:/usr/app'
 
