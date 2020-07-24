@@ -12,9 +12,9 @@ def ship(message, thing):
 
 @respond_to(r'answer \<?(.*)\>?')
 def answer(message, thing):
-    """ """
+    """ Anaswer a slack request """
     answer = read_answer(thing)
-    message.reply(f'Answering {thing} - {answer}  ')
+    message.reply(f'{answer}  ')
 
 
 @respond_to('^reply_webapi$')

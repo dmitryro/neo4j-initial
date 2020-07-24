@@ -16,6 +16,7 @@ from aredis import StrictRedis
 import asyncio
 from datetime import datetime
 import faust
+from graph import find_answer
 import logging
 from redis import StrictRedis as RegularStrictRedis
 from time import sleep
@@ -70,7 +71,11 @@ async def consumer(stream):
 
 
         if not answer:
-            answer = Answer(question=message.question, answer='some cool answer', timestamp=datetime.now())
+            answer = find_answer(message.question)
+            if not answer:
+               'some initial answer'
+
+            answer = Answer(question=message.question, answer=answer, timestamp=datetime.now())
             answers_table[key] = answer
             answer_key = f'{key}-answer'
             await ar.set(answer_key, answer.answer)
