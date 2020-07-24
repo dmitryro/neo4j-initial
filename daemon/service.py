@@ -56,6 +56,7 @@ async def str_consumer(stream):
 async def store_question(stream):
     async for message in stream:
         key = encode(message)
+
         if key not in questions_table.keys():
             question = Question(question=message, timestamp=datetime.now())
             questions_table[key] = question
@@ -73,7 +74,7 @@ async def consumer(stream):
         if not answer:
             answer = find_answer(message.question)
             if not answer:
-               'some initial answer'
+               answer = 'some initial answer'
 
             answer = Answer(question=message.question, answer=answer, timestamp=datetime.now())
             answers_table[key] = answer

@@ -15,6 +15,11 @@ until nc -vz ${SCHEMA_REGISTRY_SERVER} ${SCHEMA_REGISTRY_SERVER_PORT}; do
   sleep 2
 done
 
+until nc -vz ${NEO4J_SERVER} ${NEO4J_SERVER_PORT}; do
+  >&2 echo "Waiting for Neo4J to be ready... - sleeping"
+  sleep 2
+done
+
 >&2 echo "Schema Registry is up - executing command"
 
 echo "Executing command ${cmd}"

@@ -81,6 +81,7 @@ services:
     depends_on:
       - kafka
       - redis
+      - neo4j
     volumes:
       - './daemon/:/usr/app'
 
