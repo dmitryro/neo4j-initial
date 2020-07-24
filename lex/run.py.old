@@ -10,6 +10,7 @@ app = faust.App('ship-app', broker=read_env('KAFKA_LISTENER'))
 questions_topic = app.topic('ship-topic', value_type=Question)
 
 
+@asyncio.coroutine
 @app.agent(questions_topic)
 async def answer(questions):
     print("TOTAL QUESTION "+len(questions))
@@ -49,11 +50,6 @@ def add_liked_person(name, liked):
         print(f"Failed connecting to bolt - {e}")
 
 
-@app.agent(questions_topic)
-async def read_stream(loop):
-    print("======> LET ME TRY AND CHECK IT ")
-
-
 async def echo(reader, writer):
    data = await reader.read(100)
    writer.write(data)
@@ -65,7 +61,6 @@ async def echo(reader, writer):
 async def worker(loop, pidx, args):
    app.main()
    server = await asyncio.start_server(answer, '0.0.0.0', 8888, reuse_port=True)
-   loop.run_forever(read_stream(loop))
    print(f'[{pidx}] started')
    yield  # wait until terminated
    server.close()

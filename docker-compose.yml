@@ -13,36 +13,37 @@ services:
       - "7687:7687/tcp"
     volumes:
       - ./neo4j:/neo4j
-    networks:
-        - neo4j_net
     deploy:
       replicas: 1
+
 
   kafka:
     container_name: ${PROJECT}-kafka
-    environment:
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
-      KAFKA_BROKER_ID: 1
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
+    env_file:
+      - .env
     image: confluentinc/cp-kafka:latest
     ports:
-      - "29092:29092/tcp"
-    networks:
-        - neo4j_net
+      - 29092:29092
+      - 9092:9092
     deploy:
       replicas: 1
+    depends_on:
+      - zookeeper
+  #  volumes:
+  #    - kafka_data:/var/lib/kafka/data  
+
 
   zookeeper:
     container_name: ${PROJECT}-zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 32181
-      ZOOKEEPER_TICK_TIME: 2000
     image: confluentinc/cp-zookeeper:latest
+    env_file:
+      - .env
     ports:
-      - "32181:32181/tcp"
-    networks:
-        - neo4j_net
+      - 32181:32181
+      - 2181:2181
+    volumes:
+      - zoo_data:/data
+      - zoo_datalog:/datalog
     deploy:
       replicas: 1
 
@@ -51,22 +52,82 @@ services:
     build: ./slackbot
     env_file:
       - .env
-    networks:
-        - neo4j_net
+    depends_on:
+      - daemon
     command: python run.py
 
 
-  lex:
-    container_name: ${PROJECT}-lex
-    build: ./lex
+#  lex:
+#    container_name: ${PROJECT}-lex
+#    build: ./lex
+#    ports:
+#      - "8888:8888/tcp"
+#    env_file:
+#      - .env
+#    command: python run.py
+
+
+  daemon:
+    container_name: ${PROJECT}_daemon
+    build:
+      context: ./daemon
+      dockerfile: Dockerfile
+    restart: always
     ports:
-      - "8888:8888/tcp"
+     - "8001:8001"
     env_file:
       - .env
-    networks:
-        - neo4j_net
-    command: python run.py
+    depends_on:
+      - kafka
+    volumes:
+      - './daemon/:/usr/app'
+
+
+  #broker:
+  #  container_name: ${PROJECT}-broker
+  #  build: ./broker
+  #  env_file:
+  #    - .env
+  #  depends_on:
+  #    - kafka
+  #  #command: faust -A app worker -l info
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:5.4.0
+    hostname: schema-registry
+    container_name: ${PROJECT}-schema-registry
+    depends_on:
+      - zookeeper
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: "zookeeper:2181"
+
+  redis:
+    container_name: ${PROJECT}_redis
+    image: redis
+    ports:
+      - "6379:6379"
+    env_file:
+      - .env
+
 
 networks:
   neo4j_net:
     driver: bridge
+
+volumes:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:
+  neo4j_conf:
+  neo4j_data:
+  dgraph:
+  pg_data:
+  neo4j_graphaware:
+  kafka_data:
+  sink_plugins:
+  zoo_data:
+  zoo_datalog:

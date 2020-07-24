@@ -1,3 +1,5 @@
 aiotools
+faust
 neo4j
-
+py2neo
+pyyaml
