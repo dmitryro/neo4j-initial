@@ -1,7 +1,38 @@
 version: '3.7'
 services:
+  db:
+    container_name: ${PROJECT_NAME}-db
+    image: postgres:alpine
+    volumes:
+      - ./api/sql/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./api/sql/data.sql:/docker-entrypoint-initdb.d/2-data.sql
+      - pg_data:/var/lib/postgresql/pg_data
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    restart: always # ignored when deploying a stack in swarm mode or kubernetes
+    deploy: # ignored by docker-compose
+      restart_policy:
+        condition: on-failure
+
+  api:
+    container_name: ${PROJECT_NAME}-api
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+     - "5000:5000"
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    volumes:
+      - ./api/:/usr/app
+
   neo4j:
-    container_name: ${PROJECT}-neo4j
+    container_name: ${PROJECT_NAME}-neo4j
     env_file:
       - .env
     restart: on-failure
@@ -18,7 +49,7 @@ services:
 
 
   kafka:
-    container_name: ${PROJECT}-kafka
+    container_name: ${PROJECT_NAME}-kafka
     env_file:
       - .env
     image: confluentinc/cp-kafka:latest
@@ -29,12 +60,10 @@ services:
       replicas: 1
     depends_on:
       - zookeeper
-  #  volumes:
-  #    - kafka_data:/var/lib/kafka/data  
 
 
   zookeeper:
-    container_name: ${PROJECT}-zookeeper
+    container_name: ${PROJECT_NAME}-zookeeper
     image: confluentinc/cp-zookeeper:latest
     env_file:
       - .env
@@ -48,7 +77,7 @@ services:
       replicas: 1
 
   slackbot:
-    container_name: ${PROJECT}-slack-bot
+    container_name: ${PROJECT_NAME}-slack-bot
     build: ./slackbot
     env_file:
       - .env
@@ -59,7 +88,7 @@ services:
 
 
 #  lex:
-#    container_name: ${PROJECT}-lex
+#    container_name: ${PROJECT_NAME}-lex
 #    build: ./lex
 #    ports:
 #      - "8888:8888/tcp"
@@ -69,13 +98,11 @@ services:
 
 
   daemon:
-    container_name: ${PROJECT}_daemon
+    container_name: ${PROJECT_NAME}-daemon
     build:
       context: ./daemon
       dockerfile: Dockerfile
     restart: always
-    ports:
-     - "8001:8001"
     env_file:
       - .env
     depends_on:
@@ -85,20 +112,21 @@ services:
     volumes:
       - './daemon/:/usr/app'
 
+  admin:
+    container_name: ${PROJECT_NAME}-admin
+    build: ./admin
+    env_file:
+      - .env
+    depends_on:
+      - api
+    ports:
+     - "8000:8000"
 
-  #broker:
-  #  container_name: ${PROJECT}-broker
-  #  build: ./broker
-  #  env_file:
-  #    - .env
-  #  depends_on:
-  #    - kafka
-  #  #command: faust -A app worker -l info
 
   schema-registry:
     image: confluentinc/cp-schema-registry:5.4.0
     hostname: schema-registry
-    container_name: ${PROJECT}-schema-registry
+    container_name: ${PROJECT_NAME}-schema-registry
     depends_on:
       - zookeeper
       - kafka
@@ -109,7 +137,7 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: "zookeeper:2181"
 
   redis:
-    container_name: ${PROJECT}_redis
+    container_name: ${PROJECT_NAME}-redis
     image: redis
     ports:
       - "6379:6379"
