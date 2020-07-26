@@ -1,7 +1,7 @@
 version: '3.7'
 services:
-  db:
-    container_name: ${PROJECT_NAME}-db
+  postgres:
+    container_name: ${PROJECT_NAME}-postgres
     image: postgres:alpine
     volumes:
       - ./api/sql/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
@@ -44,6 +44,7 @@ services:
       - "7687:7687/tcp"
     volumes:
       - ./neo4j:/neo4j
+      - neo4j_data:/data
     deploy:
       replicas: 1
 
@@ -112,15 +113,15 @@ services:
     volumes:
       - './daemon/:/usr/app'
 
-  admin:
-    container_name: ${PROJECT_NAME}-admin
-    build: ./admin
-    env_file:
-      - .env
-    depends_on:
-      - api
-    ports:
-     - "8000:8000"
+#  admin:
+#    container_name: ${PROJECT_NAME}-admin
+#    build: ./admin
+#    env_file:
+#      - .env
+#    depends_on:
+#      - api
+#    ports:
+#     - "8000:8000"
 
 
   schema-registry:

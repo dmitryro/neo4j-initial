@@ -5,7 +5,7 @@ FROM python:3.9.0b3-alpine
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 RUN apk update \
-    && apk add --no-cache git bash gcc python3-dev jpeg-dev zlib-dev musl-dev openssl-dev libffi-dev build-base
+    && apk add --no-cache postgresql-dev bash gcc python3-dev zlib-dev musl-dev openssl-dev libffi-dev build-base
 RUN pip install --upgrade pip
 RUN mkdir -p /opt/services/slackbot
 WORKDIR /opt/services/slackbot

@@ -15,6 +15,17 @@ ALTER ROLE postgres SET default_transaction_isolation TO 'read committed';
 ALTER ROLE postgres SET timezone TO 'America/New_York';
 GRANT ALL PRIVILEGES ON DATABASE postgres TO postgres;
 
+CREATE SEQUENCE pending_id_seq;
+
+CREATE TABLE pending (
+        id integer NOT NULL DEFAULT nextval('pending_id_seq'),
+        username varchar(100) NOT NULL,
+        real_name varchar(200) NOT NULL,
+        question varchar(2048),
+        date_asked timestamptz NOT NULL,
+        date_answered timestamptz DEFAULT NULL); 
+
+
 CREATE SEQUENCE user_id_seq;
 
 CREATE TABLE users (
@@ -271,3 +282,6 @@ OWNED BY contacts.id;
 
 ALTER SEQUENCE action_id_seq
 OWNED BY actions.id;
+
+ALTER SEQUENCE pending_id_seq
+OWNED BY pending.id;

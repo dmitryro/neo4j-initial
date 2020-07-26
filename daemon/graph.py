@@ -45,7 +45,7 @@ def add_related(tx, question, related):
            question=question, related=related)
 
 
-def add_question(question, answer):
+def add_question(question=None, answer=None):
     try:
         uri = "bolt://neo4j:7687"
         driver = GraphDatabase.driver(uri, auth=("neo4j", "graph"))
@@ -53,7 +53,7 @@ def add_question(question, answer):
         with driver.session() as session:
             session.write_transaction(create_new_question, question, answer)
     except Exception as e:
-        print(f"Failed connecting to bolt - {e}")
+        logger.info(f"Failed connecting to bolt - {e}")
 
 
 def add_related_question(question, related):
@@ -65,5 +65,4 @@ def add_related_question(question, related):
             session.write_transaction(create_new, question, answer)
             session.write_transaction(add_related, question, related)
     except Exception as e:
-        print(f"Failed connecting to bolt - {e}")
-
+        logger.info(f"Failed connecting to bolt - {e}")

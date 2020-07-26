@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 import os
+import json
 import logging
 import tempfile
 import requests
+from sqlalchemy import create_engine
+from sqlalchemy.orm.session import sessionmaker
 from time import sleep
 from redis import StrictRedis as RegularStrictRedis
 from contextlib import contextmanager
@@ -12,6 +15,20 @@ import base64
 
 logger = logging.getLogger(__name__)
 r = RegularStrictRedis(host='redis', port=6379, db=0)
+
+
+def obtain_session():
+    """ Get SQLAlchemy session """
+    engine = create_engine(os.environ['DATABASE_URL'])
+    session = sessionmaker(autoflush=True)
+    # Bind the sessionmaker to engine
+    session.configure(bind=engine)
+    return session()
+
+def save_pending(pending):
+    s = obtain_session()
+    s.add(pending)
+    s.commit()
 
 
 def read_env(property):
@@ -33,18 +50,28 @@ def decode(base64_message):
     return message
 
 
+def store_answered(question, answer):
+    msg = {'question': question, "answer": answer}
+    r.lpush('answered', json.dumps(msg).encode('utf-8'))
+    logger.info(f"Storing answered in NEO4J - {question} {answer}")
+
+
 def read_answer(msg):
+    if not msg:
+        return 'Empty question sent, sorry'
+
     r.lpush('questions', msg)
     logger.info("Processing answer")
     sleep(4)
     key = encode(msg)
     answer_key = f'{key}-answer'
-    answer = r.get(answer_key).decode('utf-8')
-    return answer
-
-def read_env(property):
-    """ Read environment """
-    return os.environ.get(property, None)
+    answer = r.get(answer_key)
+ 
+    if not answer:
+        default_answer = read_env("SLACK_DEFAULT_ANSWER")
+        return default_answer
+    else:
+        return answer.decode('utf-8')
 
 
 def download_file(url, fpath, token=''):

@@ -1,34 +1,23 @@
-"""examples/service.py
-This examples starts a separate :pypi:`mode` service with the app.
-If you want the service instance to be generally available
-you may create a subclass of app, to define a new app.myservice attribute:
-.. sourcecode:: python
-    class App(faust.App):
-        myservice: MyService
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            self.myservice = self.service(
-                MyService(loop=self.loop, beacon=self.beacon),
-            )
-    app = App('service-example')
+"""daemin/service.py
+This is the async daemon to post into kafka and consume from kafka
 """
 import aredis
 from aredis import StrictRedis
 import asyncio
 from datetime import datetime
 import faust
-from graph import find_answer
+from graph import find_answer, add_question
+import json
 import logging
 from redis import StrictRedis as RegularStrictRedis
 from time import sleep
 
 from models import Answer, Question
-from utils import decode, encode
+from utils import decode, encode, read_env
 
 r = RegularStrictRedis(host='redis', port=6379, db=0)
 ar = StrictRedis(host='redis', port=6379, db=0)
-r.set('question', 'hello world')
-
-
+default_answer = read_env("SLACK_DEFAULT_ANSWER")
 app = faust.App('service-ask', broker='kafka://kafka:9092')
 answers_table = app.Table('answers', default=str)
 questions_table = app.Table('questions', default=str)
@@ -68,13 +57,13 @@ async def consumer(stream):
     async for message in stream:
         logger.info(f"Will try tofind the answer to {message.question}")
         key = encode(message.question)
-        answer = answers_table[key]
-
+        answer = find_answer(message.question)
 
         if not answer:
-            answer = find_answer(message.question)
+            answer = answers_table[key]
+
             if not answer:
-               answer = 'some initial answer'
+               answer = default_answer
 
             answer = Answer(question=message.question, answer=answer, timestamp=datetime.now())
             answers_table[key] = answer
@@ -82,14 +71,49 @@ async def consumer(stream):
             await ar.set(answer_key, answer.answer)
             logger.info(f"=>The answer is {answer.answer} and it's stored under key {answer_key}")         
         else:
-            logger.info(f"Found answer to {answer.question} and it is {answer.answer}")
+            ans = Answer(question=message, answer=answer, timestamp=datetime.now())
+            answers_table[key] = ans
+            answer_key = f'{key}-answer'
+            await ar.set(answer_key, ans.answer)
+            logger.info(f"Found answer to {message} and it is {ans.answer}")
     
         logger.info(f'Received question: {message.question!r}')
 
 
 @app.timer(2.0)
+async def answer_producer():
+    pass
+    #while(await ar.llen('answered')!=0):
+    #    item = await ar.lpop('answered')
+    #    d = json.loads(item)
+    #    logger.info(f"STORING ANSWER {d['answer']} to question {d['question']}")
+    #    q = d['question']
+    #    a = d['answer']
+    #    add_question(**d)
+    #    await store_question.send(value=q)
+    #    key = encode(q)
+    #    question = Question(question=q, timestamp=datetime.now()) 
+    #    await consumer.send(value=question)        
+    #    logger.info("Now new answer and question should be in database")
+
+
+@app.timer(2.0)
 async def producer():
     questions = []
+
+    while(await ar.llen('answered')!=0):
+        item = await ar.lpop('answered')
+        d = json.loads(item)
+        logger.info(f"STORING ANSWER {d['answer']} to question {d['question']}")
+        q = d['question']
+        a = d['answer']
+        add_question(**d)
+        await store_question.send(value=q)
+        key = encode(q)
+        question = Question(question=q, timestamp=datetime.now())
+        await consumer.send(value=question)
+        logger.info("Now new answer and question should be in database")
+
 
     while(await ar.llen('questions')!=0):
         item = await ar.lpop('questions')
@@ -103,18 +127,21 @@ async def producer():
         #store it in the table
         await store_question.send(value=q)   
         key = encode(q) 
-        answer = answers_table[key]
-        logger.info(f"ANSWER SO FAR {answer}")       
+        answer = find_answer(q)
         if answer:
-            print(f"Found anwer for {question.question} - and it is - {answer}")
-            logger.info(f"Found anwer for {question.question} - and it is - {answer}")
+            question = Question(question=q, timestamp=datetime.now())
+            await consumer.send(value=question)
+            logger.info(f"Found anwer for {q} - and it is - {answer}")
         else:
+            answer = answers_table[key]
             question = questions_table[key]
             if not question:
                 question = Question(question=q, timestamp=datetime.now())
-                logger.info(f"ABOUT TO SEND QUESTION - WAIT {question.question}") 
-                print(f"Didn't find anwer for {question.question} - requesting")
+                logger.info(f"ABOUT TO SEND QUESTION - WAIT {question.question}")
+                logger.info(f"Didn't find anwer for {question.question} - requesting")
                 await consumer.send(value=question)
+
+        logger.info(f"ANSWER SO FAR {answer}")       
 
     ## -- this is old 
     #if question:

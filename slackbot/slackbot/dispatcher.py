@@ -261,6 +261,11 @@ class Message(object):
             self.send(text)
 
     @unicode_compact
+    def get_channel_id(self):
+        self.channel_id = self._client.open_dm_channel(self._get_user_id())
+        return self.channel_id
+
+    @unicode_compact
     def direct_reply(self, text):
         """
             Send a reply via direct message using RTM API

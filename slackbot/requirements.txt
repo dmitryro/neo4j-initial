@@ -1,7 +1,11 @@
--e git+https://github.com/dmitryro/broker.git#egg=broker
+psycopg2
+psycopg2-binary
+SQLAlchemy
+sqlalchemy-migrate
 requests>=2.4.0
 websocket-client>=0.22.0,<=0.44.0
 slacker>=0.9.50
+slacker-log-handler
 six>=1.10.0
 pytest>=2.9.1
 redis
