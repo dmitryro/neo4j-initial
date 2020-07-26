@@ -25,6 +25,16 @@ CREATE TABLE pending (
         date_asked timestamptz NOT NULL,
         date_answered timestamptz DEFAULT NULL); 
 
+CREATE SEQUENCE mapping_id_seq;
+
+
+CREATE TABLE mappings (
+        id integer NOT NULL DEFAULT nextval('mapping_id_seq'),
+        question_compressed varchar(250),
+        answer_compressed varchar(250),
+        date_modified timestamptz DEFAULT NOW(), 
+        version numeric(2,2));        
+
 
 CREATE SEQUENCE user_id_seq;
 
@@ -285,3 +295,6 @@ OWNED BY actions.id;
 
 ALTER SEQUENCE pending_id_seq
 OWNED BY pending.id;
+
+ALTER SEQUENCE mappings_id_seq
+OWNED BY mappings.id;

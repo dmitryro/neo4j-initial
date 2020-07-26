@@ -9,6 +9,41 @@ logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
+class Mapping(Base):
+    id = Column(Integer, primary_key=True)
+    question_compressed = Column(String(30), unique=False)
+    answer_compressed = Column(String(30), unique=False)
+    date_modified = Column(DateTime(timezone=True),
+                                    server_default=func.now(),
+                                    nullable=True,
+                                    default=None)    
+    version = Column(Float(), unique=False)
+
+    __tablename__ = "mappings"
+
+    def __init__(self, question_compressed=None, 
+                       answer_compressed=None, 
+                       date_modified=func.now(),
+                       version=0.01):
+        self.question_compressed = question_compressed
+        self.answer_compressed = answer_compressed
+        self.date_modified = date_modified
+        self.version = version
+
+    def save(self):
+        """ Save pending """
+        s = obtain_session()
+        s.add(self)
+        s.commit()
+
+    def delete(self):
+        """ Delete pending - no longer used """
+        s = obtain_session()
+        s.delete(self)
+        s.commit()
+        s.flush()
+
+
 class Pending(Base):
     """ The user record to save in Postgres """
 

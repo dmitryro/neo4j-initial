@@ -39,7 +39,7 @@ effect.
 # BOT_EMOJI = ':godmode:'
 
 '''Specify a different reply when the bot is messaged with no matching cmd'''
-DEFAULT_REPLY = None
+DEFAULT_REPLY = "Sorry, I can't figure this out."
 
 for key in os.environ:
     if key[:9] == 'SLACKBOT_':
