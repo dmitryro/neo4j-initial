@@ -1,21 +1,26 @@
 # -*- coding: utf-8 -*-
-import os
+import base64
+from contextlib import contextmanager
 import json
 import logging
-import tempfile
-import requests
-from sqlalchemy import create_engine
-from sqlalchemy.orm.session import sessionmaker
-from time import sleep
+import os
 from redis import StrictRedis as RegularStrictRedis
-from contextlib import contextmanager
+import requests
 from six.moves import _thread, range, queue
 import six
-import base64
+from sqlalchemy import create_engine
+from sqlalchemy.orm.session import sessionmaker
+import tempfile
+from time import sleep
 
 logger = logging.getLogger(__name__)
-r = RegularStrictRedis(host='redis', port=6379, db=0)
+read_env = lambda property: os.environ.get(property, None) 
 
+redis = dict()
+redis['db'] = read_env('REDIS_DB')
+redis['host'] = read_env('REDIS_HOST')
+redis['port'] = read_env('REDIS_PORT')
+r = RegularStrictRedis(**redis)
 
 def obtain_session():
     """ Get SQLAlchemy session """

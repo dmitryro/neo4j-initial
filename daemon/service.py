@@ -15,10 +15,17 @@ from time import sleep
 from models import Answer, Question
 from utils import decode, encode, read_env
 
-r = RegularStrictRedis(host='redis', port=6379, db=0)
-ar = StrictRedis(host='redis', port=6379, db=0)
+redis = dict()
+redis['host'] = read_env('REDIS_HOST')
+redis['port'] = read_env('REDIS_PORT')
+redis['db'] = read_env('REDIS_DB')
+
+r = RegularStrictRedis(**redis)
+ar = StrictRedis(**redis)
+# In case we find no other answer
 default_answer = read_env("SLACK_DEFAULT_ANSWER")
-app = faust.App('service-ask', broker='kafka://kafka:9092')
+
+app = faust.App('service-ask', broker=read_env('KAFKA_LISTENER'))
 answers_table = app.Table('answers', default=str)
 questions_table = app.Table('questions', default=str)
 
@@ -81,23 +88,6 @@ async def consumer(stream):
 
 
 @app.timer(2.0)
-async def answer_producer():
-    pass
-    #while(await ar.llen('answered')!=0):
-    #    item = await ar.lpop('answered')
-    #    d = json.loads(item)
-    #    logger.info(f"STORING ANSWER {d['answer']} to question {d['question']}")
-    #    q = d['question']
-    #    a = d['answer']
-    #    add_question(**d)
-    #    await store_question.send(value=q)
-    #    key = encode(q)
-    #    question = Question(question=q, timestamp=datetime.now()) 
-    #    await consumer.send(value=question)        
-    #    logger.info("Now new answer and question should be in database")
-
-
-@app.timer(2.0)
 async def producer():
     questions = []
 
@@ -119,7 +109,6 @@ async def producer():
         item = await ar.lpop('questions')
         questions.append(str(item.decode('utf-8')))
 
-    print(f"Questions so far {questions}")
     logger.info(f"Questions so far {questions}")
 
     for q in questions:
@@ -137,20 +126,10 @@ async def producer():
             question = questions_table[key]
             if not question:
                 question = Question(question=q, timestamp=datetime.now())
-                logger.info(f"ABOUT TO SEND QUESTION - WAIT {question.question}")
-                logger.info(f"Didn't find anwer for {question.question} - requesting")
                 await consumer.send(value=question)
 
-        logger.info(f"ANSWER SO FAR {answer}")       
+        logger.info(f"Answer so far ... {answer}")       
 
-    ## -- this is old 
-    #if question:
-    #    await consumer.send(value=question)
-    #else:
-    
-    #print("About to send ...")
-    #await consumer.send(value=question)
-    
 
 def run_producer(msg):
     r.lpush('questions', msg)

@@ -1,6 +1,11 @@
 import base64
 import os
 
+def enncode_int_id(message):
+    pass
+
+def decode_int_id(message):
+    pass
 
 def encode(message):
     message_bytes = message.encode('utf-8')
