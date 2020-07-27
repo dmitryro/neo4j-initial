@@ -296,5 +296,5 @@ OWNED BY actions.id;
 ALTER SEQUENCE pending_id_seq
 OWNED BY pending.id;
 
-ALTER SEQUENCE mappings_id_seq
+ALTER SEQUENCE mapping_id_seq
 OWNED BY mappings.id;

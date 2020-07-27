@@ -113,15 +113,15 @@ services:
     volumes:
       - './daemon/:/usr/app'
 
-#  admin:
-#    container_name: ${PROJECT_NAME}-admin
-#    build: ./admin
-#    env_file:
-#      - .env
-#    depends_on:
-#      - api
-#    ports:
-#     - "8000:8000"
+  admin:
+    container_name: ${PROJECT_NAME}-admin
+    build: ./admin
+    env_file:
+      - .env
+    depends_on:
+      - api
+    ports:
+     - "8000:8000"
 
 
   schema-registry:
