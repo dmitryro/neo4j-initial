@@ -11,3 +11,11 @@ class Answer(faust.Record, isodates=True):
     question: str
     answer: str
     timestamp: datetime
+
+
+class Addition(faust.Record, isodates=True):
+    answer: str
+    index: int
+    text: str
+    timestamp: datetime
+

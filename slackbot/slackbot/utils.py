@@ -36,9 +36,9 @@ def save_pending(pending):
     s.commit()
 
 
-def read_env(property):
-    """ Read environment """
-    return os.environ.get(property, None)
+#def read_env(property):
+#    """ Read environment """
+#    return os.environ.get(property, None)
 
 
 def encode(message):
@@ -55,10 +55,41 @@ def decode(base64_message):
     return message
 
 
-def store_answered(question, answer):
+def store_answer(question, answer):
     msg = {'question': question, "answer": answer}
     r.lpush('answered', json.dumps(msg).encode('utf-8'))
     logger.info(f"Storing answered in NEO4J - {question} {answer}")
+
+
+def extend_answer(question, answer, extention):
+    msg = {'question': question, "answer": answer, "extentions": extension}
+    r.lpush('extended', json.dumps(msg).encode('utf-8'))
+    logger.info(f"Storing extanded answer  in NEO4J - {question} {answer} {extension}")
+
+
+def edit_answer(question, answer):
+    logger.info(f"===================== > > > I AM ABOUT TO EDIT {question}, {answer}")
+    msg = {'question': question, "answer": answer}
+    r.lpush('edited', json.dumps(msg).encode('utf-8'))
+    logger.info(f"Storing edited answer  in NEO4J - {question} {answer}")
+
+
+def read_question(msg):
+    if not msg:
+        return 'Empty question sent, sorry'
+    answer = {"answer": msg}
+    r.lpush('searched_questions', json.dumps(answer).encode('utf-8'))
+    logger.info("Looking for question")
+    sleep(5)
+
+    key = encode(msg)    
+    question_key = '{key}-question'
+    question = r.get(question_key)
+    if not question:
+        return None
+    else:
+        return question.decode('utf-8')
+
 
 
 def read_answer(msg):

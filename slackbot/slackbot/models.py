@@ -3,7 +3,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy import *
 from sqlalchemy.ext.declarative import declarative_base
-from slackbot.utils import obtain_session
+from slackbot.utils import obtain_session, encode
 
 logger = logging.getLogger(__name__)
 
@@ -11,8 +11,8 @@ Base = declarative_base()
 
 class Mapping(Base):
     id = Column(Integer, primary_key=True)
-    question_compressed = Column(String(30), unique=False)
-    answer_compressed = Column(String(30), unique=False)
+    question_compressed = Column(String(230), unique=False)
+    answer_compressed = Column(String(230), unique=False)
     date_modified = Column(DateTime(timezone=True),
                                     server_default=func.now(),
                                     nullable=True,
@@ -44,6 +44,48 @@ class Mapping(Base):
         s.flush()
 
 
+    def update(self):
+        """ Mark as answered """
+        s = obtain_session()
+        self.date_modified = func.now()
+        query = s.query(Mapping).filter(and_(Mapping.id==self.id,
+                                             Mapping.question_compressed==self.question_compressed))
+        query.update({"date_modified": func.now(), "answer_compressed": self.answer_compressed}, synchronize_session=False)
+        s.commit()
+
+
+    @staticmethod
+    def latest():
+        """ Read latest mapping """
+        s = obtain_session()
+        q = s.query(Mapping).order_by(desc('date_modified')).first()
+        return q
+
+
+    @staticmethod
+    def latest_by_question(question):
+        """ Read latest mapping """
+        s = obtain_session()
+        m = s.query(Mapping).filter(Mapping.question_compressed==encode(question)).order_by(desc('date_modified')).first()
+        return m
+
+
+    @staticmethod
+    def latest(answer):
+        """ Read latest mapping """
+        s = obtain_session()
+        q = s.query(Mapping).filter(Mapping.answer_compressed==encode(answer)).order_by(desc('date_modified')).first()
+        return q
+
+
+    @staticmethod
+    def find(self, id):
+        """ Read latest unanswered """
+        s = obtain_session()
+        m = s.query(Mapping).get(id)
+        return m
+
+
 class Pending(Base):
     """ The user record to save in Postgres """
 
@@ -72,13 +114,29 @@ class Pending(Base):
         s = obtain_session()
         s.add(self)
         s.commit()
-
     
+
     @staticmethod
-    def read_latest():
+    def latest_answered():
+        """ Read latest answered """
+        s = obtain_session()
+        q = s.query(Pending).filter(Pending.date_answered!=None).order_by(desc('date_asked')).first()
+        return q
+    
+
+    @staticmethod
+    def latest():
         """ Read latest unanswered """
         s = obtain_session()
         q = s.query(Pending).filter(Pending.date_answered==None).order_by(desc('date_asked')).first() 
+        return q
+
+
+    @staticmethod
+    def latest_by_question(question):
+        """ Read latest mapping """
+        s = obtain_session()
+        q = s.query(Pending).filter(Pending.question==question).order_by(desc('date_asked')).first()
         return q
 
 
