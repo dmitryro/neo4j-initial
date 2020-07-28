@@ -6,7 +6,7 @@ from utils import read_env, encode
 
 logger = logging.getLogger(__name__)
 uri = "neo4j://neo4j:7687"
-driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+driver = GraphDatabase.driver(uri, auth=basic_auth("user", "pass"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
 
 def create_question_index(tx, question):
     """ Create a question """
