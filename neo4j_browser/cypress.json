@@ -1,6 +1,6 @@
 {
   "animationDistanceThreshold": 5,
-  "baseUrl": "http://localhost:8080",
+  "baseUrl": "http://localhost:8082",
   "chromeWebSecurity": false,
   "defaultCommandTimeout": 4000,
   "environmentVariables": {},
