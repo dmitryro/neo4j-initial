@@ -1,0 +1,124 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`CodeViews CodeStatusbar displays no statusBarMessage 1`] = `
+<div>
+  <div
+    class="styled__StyledStatsBar-sc-1dtvgs1-23 gWjkIU"
+  >
+    <div
+      class="Ellipsis-sc-1dn9bou-0 gzqRPC"
+    />
+  </div>
+</div>
+`;
+
+exports[`CodeViews CodeStatusbar displays statusBarMessage 1`] = `
+<div>
+  <div
+    class="styled__StyledStatsBar-sc-1dtvgs1-23 gWjkIU"
+  >
+    <div
+      class="Ellipsis-sc-1dn9bou-0 gzqRPC"
+    >
+      Started streaming 1 records after 5 ms and completed after 10  ms.
+    </div>
+  </div>
+</div>
+`;
+
+exports[`CodeViews CodeView displays nothing if not successful query 1`] = `<div />`;
+
+exports[`CodeViews CodeView displays request and response info if successful query 1`] = `
+<div>
+  <div
+    class="styled__PaddedDiv-sc-1dtvgs1-1 kyHRpW"
+  >
+    <table
+      class="styled__StyledTable-sc-1dtvgs1-37 hQXYgT"
+    >
+      <tbody
+        class="styled__StyledTBody-sc-1dtvgs1-38 kGUkAE"
+      >
+        <tr
+          class="styled__StyledAlteringTr-sc-1dtvgs1-40 iAVdiN"
+        >
+          <td
+            class="styled__StyledStrongTd-sc-1dtvgs1-41 jldPxJ"
+          >
+            Server version
+          </td>
+          <td
+            class="styled__StyledTd-sc-1dtvgs1-42 dGNdSM"
+          >
+            xx1
+          </td>
+        </tr>
+        <tr
+          class="styled__StyledAlteringTr-sc-1dtvgs1-40 iAVdiN"
+        >
+          <td
+            class="styled__StyledStrongTd-sc-1dtvgs1-41 jldPxJ"
+          >
+            Server address
+          </td>
+          <td
+            class="styled__StyledTd-sc-1dtvgs1-42 dGNdSM"
+          >
+            xx2
+          </td>
+        </tr>
+        <tr
+          class="styled__StyledAlteringTr-sc-1dtvgs1-40 iAVdiN"
+        >
+          <td
+            class="styled__StyledStrongTd-sc-1dtvgs1-41 jldPxJ"
+          >
+            Query
+          </td>
+          <td
+            class="styled__StyledTd-sc-1dtvgs1-42 dGNdSM"
+          >
+            MATCH xx0
+          </td>
+        </tr>
+        <tr
+          class="styled__StyledAlteringTr-sc-1dtvgs1-40 iAVdiN"
+        >
+          <td
+            class="styled__StyledStrongTd-sc-1dtvgs1-41 jldPxJ"
+          >
+            Summary
+            <div
+              class="styled__StyledExpandable-sc-1dtvgs1-39 dxftfv fa fa-caret-right"
+              title="Expand section"
+            />
+          </td>
+          <td
+            class="styled__StyledTd-sc-1dtvgs1-42 dGNdSM"
+          >
+            {,  "server": {,    "version": "xx1", ...
+          </td>
+        </tr>
+        <tr
+          class="styled__StyledAlteringTr-sc-1dtvgs1-40 iAVdiN"
+        >
+          <td
+            class="styled__StyledStrongTd-sc-1dtvgs1-41 jldPxJ"
+          >
+            Response
+            <div
+              class="styled__StyledExpandable-sc-1dtvgs1-39 dxftfv fa fa-caret-right"
+              title="Expand section"
+            />
+          </td>
+          <td
+            class="styled__StyledTd-sc-1dtvgs1-42 dGNdSM"
+          >
+            [,  {,    "res": "xx3" ...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+`;
