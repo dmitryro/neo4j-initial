@@ -5,8 +5,11 @@ from neo4j import Query
 from utils import read_env, encode
 
 logger = logging.getLogger(__name__)
+
+USER = read_env('NEO4J_USER')
+PASS = read_env('NEO4J_PASSWORD')
 uri = "neo4j://neo4j:7687"
-driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+driver = GraphDatabase.driver(uri, auth=basic_auth(USER, PASS), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
 
 def create_question_index(tx, question):
     """ Create a question """
@@ -34,7 +37,7 @@ def search_question(tx, answer):
 def initiate_indexes():
     """ Initialize any indexes """
     try:
-        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+        driver = GraphDatabase.driver(uri, auth=basic_auth(USER, PASS), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
         with driver.session() as session:
             answer = session.write_transaction(create_question_index, None)
             session.close()
@@ -48,7 +51,7 @@ def find_answer(question):
     """ Find an answer """
     try:
         answer = None
-        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+        driver = GraphDatabase.driver(uri, auth=basic_auth(USER, PASS), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
 
         with driver.session() as session:
             answer = session.read_transaction(search_answer, question)
@@ -67,7 +70,7 @@ def find_question(answer):
     """ Find an answer """
     try:
         q = None
-        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+        driver = GraphDatabase.driver(uri, auth=basic_auth(USER, PASS), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
 
         with driver.session() as session:
             q = session.read_transaction(search_question, answer)
@@ -116,7 +119,7 @@ def edit_question(question=None, answer=None):
     """ Add a new question to the KB """
     q = None
     try:
-        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+        driver = GraphDatabase.driver(uri, auth=basic_auth(USER, PASS), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
         with driver.session() as session:
             q = session.write_transaction(edit_existing_question, question, answer)
     except Exception as e:
@@ -127,7 +130,7 @@ def edit_question(question=None, answer=None):
 def add_question(question=None, answer=None):
     """ Add a new question to the KB """
     try:
-        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+        driver = GraphDatabase.driver(uri, auth=basic_auth(USER, PASS), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
 
         with driver.session() as session:
             session.write_transaction(create_new_question, question, answer)
@@ -138,7 +141,7 @@ def add_question(question=None, answer=None):
 def add_related_question(question, related):
     """ Add a related question to the KB """
     try:
-        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+        driver = GraphDatabase.driver(uri, auth=basic_auth(USER, PASS), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
 
         with driver.session() as session:
             session.write_transaction(create_new, question, answer)
