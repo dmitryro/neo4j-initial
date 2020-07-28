@@ -6,6 +6,7 @@ faust
 faust[eventlet]
 mode
 neo4j
+neo4jrestclient
 py2neo
 pyyaml
 simple-settings

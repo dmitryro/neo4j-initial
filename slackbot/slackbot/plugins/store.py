@@ -48,7 +48,6 @@ def amend(message, thing):
     """ Amend recent answer """
     try:
         mapping = Mapping.latest(thing)
-
         if mapping:
             answer = decode(mapping.answer_compressed)
             question = decode(mapping.question_compressed)
@@ -66,7 +65,6 @@ def amend(message, thing):
                               answer_compressed=str(encode(thing)), version=0.01)
             mapping.save()             
 
-        logger.info(f"THE MAPPING WAS ===============+> > > {question} {thing}")
         edit_answer(question, thing)
         message.reply(f'Edited previous answer "{answer}" given to question "{question} to become {thing}" ')
     except Exception as e:

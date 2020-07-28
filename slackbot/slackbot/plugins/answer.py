@@ -14,14 +14,11 @@ default_answer = read_env("SLACK_DEFAULT_ANSWER")
 def answer(message, thing):
     """ Anaswer a slack request """
     answer = read_answer(thing)
-    logger.info(f"============> Answer discovered so far is {answer}")
 
     if not answer: 
         p = Pending(username=message.user['name'], real_name=message.user['real_name'], question=thing)
         p.save()
-    elif answer == default_answer:
-        p = Pending(username=message.user['name'], real_name=message.user['real_name'], question=thing)
-        p.save()
+        answer = default_answer
     else:
         mapping = Mapping.latest_by_question(thing)
         if mapping:

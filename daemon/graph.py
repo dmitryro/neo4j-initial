@@ -1,6 +1,12 @@
-from neo4j import GraphDatabase
+import logging
+import neo4j
+from neo4j import GraphDatabase, basic_auth
+from neo4j import Query
 from utils import read_env, encode
 
+logger = logging.getLogger(__name__)
+uri = "neo4j://neo4j:7687"
+driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
 
 def create_question_index(tx, question):
     """ Create a question """
@@ -10,27 +16,25 @@ def create_question_index(tx, question):
 def search_answer(tx, question):
     """ Search for an answer """
     label = encode(question)
-    result = tx.run("MATCH (q:Question) WHERE q.label = $label return q.answer AS answer", label=label)
-    try:
+    #result = tx.run("MATCH (q:Question) WHERE q.label = $label return q.answer AS answer", label=label)
+    with driver.session() as session:
+        result = session.run(Query("MATCH (q: Question) WHERE apoc.text.levenshteinDistance($question, q.question) < 3.1 return q.answer AS answer", timeout=1.0), question=question)
         return list(result)[0]['answer']
-    except Exception as e:
-        return None
+    return None
 
 
 def search_question(tx, answer):
     """ Search for a question """
-    result = tx.run("MATCH (q:Question) WHERE q.answer = $answer return q.question AS question", answer=answer)
-    try:
+    with driver.session() as session:
+        result = session.run(Query("MATCH (q: Question) WHERE apoc.text.levenshteinDistance($answer, q.answer) < 3.1 return q.question AS question", timeout=1.0), answer=answer)
         return list(result)[0]['question']
-    except Exception as e:
-        return None
+    return None
 
 
 def initiate_indexes():
     """ Initialize any indexes """
     try:
-        uri = read_env("BOLT_URI")
-        driver = GraphDatabase.driver(uri, auth=("neo4j", "graph"))
+        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
         with driver.session() as session:
             answer = session.write_transaction(create_question_index, None)
             session.close()
@@ -44,8 +48,7 @@ def find_answer(question):
     """ Find an answer """
     try:
         answer = None
-        uri = read_env("BOLT_URI")
-        driver = GraphDatabase.driver(uri, auth=("neo4j", "graph"))
+        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
 
         with driver.session() as session:
             answer = session.read_transaction(search_answer, question)
@@ -64,8 +67,7 @@ def find_question(answer):
     """ Find an answer """
     try:
         q = None
-        uri = read_env("BOLT_URI")
-        driver = GraphDatabase.driver(uri, auth=("neo4j", "graph"))
+        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
 
         with driver.session() as session:
             q = session.read_transaction(search_question, answer)
@@ -114,8 +116,7 @@ def edit_question(question=None, answer=None):
     """ Add a new question to the KB """
     q = None
     try:
-        uri = read_env("BOLT_URI")
-        driver = GraphDatabase.driver(uri, auth=("neo4j", "graph"))
+        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
         with driver.session() as session:
             q = session.write_transaction(edit_existing_question, question, answer)
     except Exception as e:
@@ -126,8 +127,7 @@ def edit_question(question=None, answer=None):
 def add_question(question=None, answer=None):
     """ Add a new question to the KB """
     try:
-        uri = read_env("BOLT_URI")
-        driver = GraphDatabase.driver(uri, auth=("neo4j", "graph"))
+        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
 
         with driver.session() as session:
             session.write_transaction(create_new_question, question, answer)
@@ -138,8 +138,7 @@ def add_question(question=None, answer=None):
 def add_related_question(question, related):
     """ Add a related question to the KB """
     try:
-        uri = read_env("BOLT_URI")
-        driver = GraphDatabase.driver(uri, auth=("neo4j", "graph"))
+        driver = GraphDatabase.driver(uri, auth=basic_auth("neo4j", "graph"), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
 
         with driver.session() as session:
             session.write_transaction(create_new, question, answer)

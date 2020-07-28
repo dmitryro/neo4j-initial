@@ -80,7 +80,7 @@ def read_question(msg):
     answer = {"answer": msg}
     r.lpush('searched_questions', json.dumps(answer).encode('utf-8'))
     logger.info("Looking for question")
-    sleep(5)
+    sleep(4)
 
     key = encode(msg)    
     question_key = '{key}-question'
@@ -104,8 +104,7 @@ def read_answer(msg):
     answer = r.get(answer_key)
  
     if not answer:
-        default_answer = read_env("SLACK_DEFAULT_ANSWER")
-        return default_answer
+        return None
     else:
         return answer.decode('utf-8')
 
