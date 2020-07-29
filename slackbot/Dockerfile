@@ -1,18 +1,35 @@
-# start from an official image
-FROM python:3.9.0b3-alpine
-# arbitrary location choice: you can change the directory
-# install psycopg2 dependencies
+FROM python:3.8.5-alpine
+ENV C_FORCE_ROOT true
+ENV PIP_FORMAT=legacy
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV KAFKA_BOOSTRAP_SERVER_PORT 9092
+ENV KAFKA_BOOSTRAP_SERVER_NAME kafka:9092
+ENV KAFKA_BROKER kafka://kafka:9092
+ENV KAFKA_BOOTSTRAP_SERVER kafka:9092
+ENV SCHEMA_REGISTRY_SERVER_PORT 8081
+ENV SCHEMA_REGISTRY_SERVER schema-registry:8081
+ENV NEO4J_SERVER neo4j
+ENV NEO4J_SERVER_PORT=7687
+ENV HOST 0.0.0.0
+ENV PORT 8001
+ENV DEBUG true
+
+COPY . /slackbot
+WORKDIR /slackbot
+COPY . .
+RUN chmod +x ./wait_for_services.sh
+RUN chmod +x ./run.sh
+# set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-RUN apk update \
-    && apk add --no-cache postgresql-dev bash gcc python3-dev zlib-dev musl-dev openssl-dev libffi-dev build-base
-RUN pip install --upgrade pip
-RUN mkdir -p /opt/services/slackbot
-WORKDIR /opt/services/slackbot
 
-# install our dependencies
-# we use --system flag because we don't need an extra virtualenv
-COPY . .
-COPY . /opt/services/slackbot
-RUN pip install -r requirements.txt \
-    && python setup.py install
+# install psycopg2 dependencies
+RUN apk update \
+    && apk add --no-cache postgresql-dev  bash libxml2-dev libxslt-dev gcc python3-dev linux-headers musl-dev openssl-dev libffi-dev build-base
+# install requirements
+RUN pip install -r requirements.txt
+# expose the app port
+
+ENTRYPOINT ["./wait_for_services.sh"]
+
+CMD ["./run.sh", "${WORKER}", "${WORKER_PORT}", "${CONFIG_CLASS}"]

@@ -1,10 +1,8 @@
-#!/usr/bin/env python
-
 import sys
 import logging
 import logging.config
-from slackbot import settings
-from slackbot.bot import Bot
+import settings
+from bot import Bot
 
 def main():
     kw = {

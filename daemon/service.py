@@ -1,4 +1,4 @@
-"""daemin/service.py
+"""daemon/service.py
 This is the async daemon to post into kafka and consume from kafka
 """
 import aredis

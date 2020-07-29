@@ -18,4 +18,3 @@ class Addition(faust.Record, isodates=True):
     index: int
     text: str
     timestamp: datetime
-

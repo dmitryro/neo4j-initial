@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from .utils import read_env
+from utils import read_env
 
 DEBUG = False
 
@@ -19,7 +19,6 @@ API_TOKEN = read_env('SLACK_TOKEN')
 
 '''
 Setup a comma delimited list of aliases that the bot will respond to.
-
 Example: if you set ALIASES='!,$' then a bot which would respond to:
 'botname hello'
 will now also respond to

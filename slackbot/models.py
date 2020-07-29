@@ -3,7 +3,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy import *
 from sqlalchemy.ext.declarative import declarative_base
-from slackbot.utils import obtain_session, encode
+from utils import obtain_session, encode
 
 logger = logging.getLogger(__name__)
 

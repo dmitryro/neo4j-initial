@@ -1,4 +1,4 @@
-FROM python:3.8.4-alpine
+FROM python:3.8.5-alpine
 ENV C_FORCE_ROOT true
 
 ENV PIP_FORMAT=legacy
@@ -36,4 +36,3 @@ EXPOSE 8001 19091
 ENTRYPOINT ["./wait_for_services.sh"]
 
 CMD ["./run.sh", "${WORKER}", "${WORKER_PORT}", "${CONFIG_CLASS}"]
-

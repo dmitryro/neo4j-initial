@@ -8,6 +8,7 @@ from redis import StrictRedis as RegularStrictRedis
 import requests
 from six.moves import _thread, range, queue
 import six
+from slack.errors import SlackApiError
 from sqlalchemy import create_engine
 from sqlalchemy.orm.session import sessionmaker
 import tempfile
@@ -30,18 +31,50 @@ def obtain_session():
     session.configure(bind=engine)
     return session()
 
+
+def respond(text, payload, ephemeral=False):
+    data = payload['data']
+    web_client = payload['web_client']
+    rtm_client = payload['rtm_client']
+    channel_id = data['channel']
+    thread_ts = data['ts']
+    user = data['user']
+
+    try:
+        if (ephemeral):
+            response = web_client.chat_postEphemeral(
+                channel=channel_id,
+                user=user,
+                as_user=False,
+                icon_emoji=":chart_with_upwards_trend:",
+                text=f"{text}",
+                thread_ts=None #thread_ts
+            )
+        else:  
+            response = web_client.chat_postMessage(
+                channel=channel_id,
+                username="Dmitry Roitman",
+                as_user=False,
+                icon_emoji=":chart_with_upwards_trend:",
+                text=f"Hi <@{user}>! {text}",
+                thread_ts=None #thread_ts
+            )
+    except SlackApiError as e:
+        # You will get a SlackApiError if "ok" is False
+        assert e.response["ok"] is False
+        assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
+        logger.error(f"Got an error: {e.response['error']}")
+
+
 def save_pending(pending):
     s = obtain_session()
     s.add(pending)
     s.commit()
 
 
-#def read_env(property):
-#    """ Read environment """
-#    return os.environ.get(property, None)
-
-
 def encode(message):
+    if not message:
+        return ""
     message_bytes = message.encode('utf-8')
     base64_bytes = base64.b64encode(message_bytes)
     base64_message = base64_bytes.decode('utf-8')
@@ -191,3 +224,4 @@ def get_http_proxy(environ):
         no_proxy = environ['no_proxy']
 
     return proxy, proxy_port, no_proxy
+    logger.info(f"OUR PAYLOAD IN ANSWERS {payload}")

@@ -1,5 +1,3 @@
-aiotools
-aioeventlet
 aredis
 eventlet
 faust

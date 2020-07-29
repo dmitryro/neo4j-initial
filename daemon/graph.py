@@ -16,6 +16,10 @@ def create_question_index(tx, question):
     tx.run("CREATE INDEX ON :Question(question)")
 
 
+def delete_all_nodes(tx):
+    tx.run("MATCH (n) DETACH DELETE n")
+
+
 def search_answer(tx, question):
     """ Search for an answer """
     label = encode(question)
@@ -46,6 +50,18 @@ def initiate_indexes():
     except Exception as e:
         answ = None
     
+
+def delete_all():
+    """ Initialize any indexes """
+    try:
+        driver = GraphDatabase.driver(uri, auth=basic_auth(USER, PASS), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+        with driver.session() as session:
+            answer = session.write_transaction(delete_all_nodes, None)
+            session.close()
+        driver.close()
+
+    except Exception as e:
+        pass
 
 def find_answer(question):
     """ Find an answer """
