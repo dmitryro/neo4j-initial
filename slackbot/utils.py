@@ -140,50 +140,6 @@ def read_blocks(text=None, question=None, answer=default_answer):
                   }
                  ]
      
-#,
-#                "accessory": {
-#                    "type": "overflow",
-#                    "options": [{"text": {"type": "plain_text",
-#                                          "text": "Approve"
-#                                         },
-#                                 "value": "value-0"
-#                                },
-#                                {"text": {"type": "plain_text",
-#                                          "text": "Skip"
-#                                         },
-#                                 "value": "value-1"
-#                                },
-#                                {"text": {"type": "plain_text",
-#                                          "text": "Make a Q/A"
-#                                         },
-#                                 "value": "value-2"
-#                                },
-#                                {"text": {"type": "plain_text",
-#                                          "text": "Create a ticket"
-#                                         },
-#                                         "value": "value-3"
-#                                },
-#                                {"text": {"type": "plain_text",
-#                                          "text": "Store"
-#                                         },
-#                                 "value": "value-4"
-#                                },
-#                                {"text": {"type": "plain_text",
-#                                          "text": "Edit"
-#                                         },
-#                                 "value": "value-5"
-#                                },
-#                                {"text": {"type": "plain_text",
-#                                          "text": "Delete"
-#                                         },
-#                                 "value": "value-6"
-#                                 }
-#                                ],
-#                               "action_id": "overflow"
-#                             }
-#                        }
-#                    ]
-
     return blocks
 
 
@@ -197,7 +153,7 @@ def respond_next(answer, question, user, channel_id, action='approve'):
                         user=user_id,
                         as_user=True,
                         icon_emoji=":chart_with_upwards_trend:",
-                        text=f'Hi <@{user_id}>! {answer}"',
+                        text=f'Hi <@{user_id}>! {answer}',
                         username=username,
                         thread_ts=None)
         except SlackApiError as e:
@@ -258,8 +214,7 @@ def respond(payload, text=None, question=None, answer=default_answer,  ephemeral
     channel_id = data['channel']
     thread_ts = data['ts']
     user = data['user']
-    logger.info(f"STEP 2 IN RESPOND HERE IS WHAT OUR USER IS LIKE {user}")
-    logger.info(f"==========+> WE ARE IN RESPOND SO FAR {text}  {question}   {answer} ")
+
     try:
         if (ephemeral):
             response = web_client.chat_postEphemeral(
@@ -333,7 +288,6 @@ def extend_answer(question, answer, extention):
 
 
 def edit_answer(question, answer):
-    logger.info(f"===================== > > > I AM ABOUT TO EDIT {question}, {answer}")
     msg = {'question': question, "answer": answer}
     r.lpush('edited', json.dumps(msg).encode('utf-8'))
     logger.info(f"Storing edited answer  in NEO4J - {question} {answer}")

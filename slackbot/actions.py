@@ -13,7 +13,6 @@ default_answer = read_env("SLACK_DEFAULT_ANSWER")
 
 def answer(payload):
     """ Anaswer a slack request """
-    logger.info(f"-----------> PAYLOAD ANSWER {payload}")
     thing = payload['data']['text']#.split(None, 1)[1]
     answer = read_answer(thing)
     user = payload['data']['user']
@@ -45,8 +44,6 @@ def answer(payload):
 
 def preview_answer(payload):
     """ Anaswer a slack request """
-    logger.info(f"-----------> PAYLOAD PREVIEW ANSWER {payload}")
-
     thing = payload['data']['text']#.split(None, 1)[1]
     answer = read_answer(thing)
     user = payload['data']['user']
@@ -90,12 +87,9 @@ def answer_next(answer:str, user:dict, channel_id:str, action='approve'):
 
 def store(payload):
     """ """
-    logger.info(f"-----------> PAYLOAD PREVIEW STORE {payload}")
     try:
         thing = payload['data']['text'].split(None, 1)[1]
-        logger.info(f"WE WILL TRY TO STORE -- {thing} ")
         p = Pending.latest()
-        logger.info(f"=======>> Found pending {p}")
 
         if p:
             m = Mapping(answer_compressed=str(encode(thing)),
@@ -103,7 +97,7 @@ def store(payload):
             m.save()
             p.mark_as_answered()
             store_answer(p.question, thing)
-            msg = f'Stored answer to question by {p.username} - {thing}'
+            msg = f'Stored answer to question by  <@{p.username}>:  {thing}'
         else:
             msg = "I was unable to store a response"
     except Exception as e:
