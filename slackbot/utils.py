@@ -187,25 +187,69 @@ def read_blocks(text=None, question=None, answer=default_answer):
     return blocks
 
 
-def respond_approved(answer, question, user, channel_id):
-    try:
-        user_id = user['id']
-        username = user['username']
-        logger.info(f"STEP 2 IN RESPOND APPROVED HERE IS WHAT OUR USER IS LIKE {user_id}")
-        response = client.chat_postMessage(
-                    channel=channel_id,
-                    user=user_id,
-                    as_user=True,
-                    icon_emoji=":chart_with_upwards_trend:",
-                    text=f'Hi <@{user_id}>! {answer}"',
-                    username=username,
-                    thread_ts=None)
-    except SlackApiError as e:
-        # You will get a SlackApiError if "ok" is False
-        assert e.response["ok"] is False
-        assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
-        logger.error(f"Got an error in respond approved : {e.response['error']}")
+def respond_next(answer, question, user, channel_id, action='approve'):
+    if action == 'approve':
+        try:
+            user_id = user['id']
+            username = user['username']
+            response = client.chat_postMessage(
+                        channel=channel_id,
+                        user=user_id,
+                        as_user=True,
+                        icon_emoji=":chart_with_upwards_trend:",
+                        text=f'Hi <@{user_id}>! {answer}"',
+                        username=username,
+                        thread_ts=None)
+        except SlackApiError as e:
+            # You will get a SlackApiError if "ok" is False
+            assert e.response["ok"] is False
+            assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
+            logger.error(f"Got an error in respond approved : {e.response['error']}")
 
+    elif action == 'dismiss':
+        try:
+            user_id = user['id']
+            username = user['username']
+            response = client.chat_postEphemeral(
+                channel=channel_id,
+                user=user_id,
+                as_user=False,
+                icon_emoji=":chart_with_upwards_trend:",
+                text=f'Hi admin, you dismissed: {answer}',
+                username='kbpro',
+                thread_ts=None #thread_ts 
+            ) 
+
+
+        except SlackApiError as e:
+            # You will get a SlackApiError if "ok" is False
+            assert e.response["ok"] is False
+            assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
+            logger.error(f"Got an error in respond approved : {e.response['error']}")
+        
+    elif action == 'edit':
+        try: 
+            user_id = user['id']
+            username = user['username']
+            
+            response = client.chat_postEphemeral(
+                channel=channel_id,
+                user=user_id,
+                as_user=False,
+                icon_emoji=":chart_with_upwards_trend:",
+                text=f'Hi admin, please edit: {answer}',
+                username='kbpro',
+                thread_ts=None #thread_ts 
+            )  
+ 
+        except SlackApiError as e: 
+            # You will get a SlackApiError if "ok" is False 
+            assert e.response["ok"] is False
+            assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found' 
+            logger.error(f"Got an error in respond approved : {e.response['error']}")      
+
+    else:
+        pass
 
 def respond(payload, text=None, question=None, answer=default_answer,  ephemeral=False):
     data = payload['data']

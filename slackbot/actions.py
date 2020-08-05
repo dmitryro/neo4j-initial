@@ -4,7 +4,7 @@ from models import Pending, Mapping
 from utils import read_answer, store_answer, read_question
 from utils import  edit_answer, extend_answer
 from utils import decode, encode, respond, read_env
-from utils import respond_approved
+from utils import respond_next
 
 
 logger = logging.getLogger(__name__)
@@ -73,28 +73,19 @@ def preview_answer(payload):
             p = Pending(username=user, real_name=user, question=thing)
             p.save()
 
-    logger.info(f"STEP 1 HERE IS WHAT OUR USER IS LIKE {user}")
     preview_answer=f'Hi admin! The user <@{user}> just asked' # "{thing}" and the answer I\'m suggesting is "{answer}" - please approve or dismiss!'   
-    logger.info(f"STEP 1.2 {preview_answer}")
-
     respond(payload, text=preview_answer, question=thing, answer=answer, ephemeral=True)
 
 
-def answer_approved(answer:str, user:dict, channel_id:str):
+def answer_next(answer:str, user:dict, channel_id:str, action='approve'):
     try:
         answer = decode(answer)
         mapping = Mapping.latest(answer)
-        question = decode(mapping.compressed_question)
-        respond_approved(answer, question, user, channel_id)
-        logger.info(f"--> We sent {answer} -- {question} -- {user}")
+        question = decode(mapping.question_compressed)
     except Exception as e:
-        logger.error(f"--> Something went wrong in answer_approvedi, no mapping found -  {e}")
+        logger.error(f"--> Something went wrong in answer processing, no mapping found -  {e}")
         question  = read_question(answer) 
-
-    logger.info(f"STEP 1.5 HERE IS WHAT OUR USER IS LIKE {user['id']}")
-    preview_answer=f'Hi admin! The user <@{user["id"]}> just asked' # "{thing}" and the answer I\'m suggesting is "{answer}" - please approve or dismiss!'   
-    logger.info(f"STEP 1.6 HERE {preview_answer}")
-    respond_approved(answer, question, user, channel_id)
+    respond_next(answer, question, user, channel_id, action=action)
 
 
 def store(payload):

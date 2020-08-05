@@ -21,15 +21,8 @@ redis['host'] = read_env('REDIS_HOST')
 redis['port'] = read_env('REDIS_PORT')
 r = RegularStrictRedis(**redis)
 
-async def poke(uri, msg):
-    async with websockets.connect(uri) as websocket:
-        await websocket.send(msg)
-        await websocket.recv()
-
-
-def store_approved(msg):
-    r.lpush('approved', msg)
-
+def redis_store(msg, key):
+    r.lpush(key, msg)
 
 
 def process_block_actions(slack_request: dict):
@@ -52,10 +45,20 @@ def process_block_actions(slack_request: dict):
 
     """
     msg = json.dumps(slack_request).encode('utf-8')
-    store_approved(msg)
-    producer.send('approval', key=bytes(msg), value=bytes(msg))
+    action = slack_request["actions"][0]
+     
+    if 'approve_' in action["selected_option"]["value"]: 
+        redis_store(msg, 'approve')
+        producer.send('approve', key=bytes(msg), value=bytes(msg))
+    elif 'dismiss_' in  action["selected_option"]["value"]:
+        redis_store(msg, 'dismiss')
+        producer.send('dismiss', key=bytes(msg), value=bytes(msg)) 
+    elif 'edit_' in action["selected_option"]["value"]:
+        redis_store(msg, 'edit')
+        producer.send('edit', key=bytes(msg), value=bytes(msg))    
+    else:
+        producer.send('dismiss', key=bytes(msg), value=bytes(msg))
 
-    
     #asyncio.get_event_loop().run_until_complete(poke('ws://slackbot:8765', msg))
     action = slack_request["actions"][0]
     state_data = {"container": slack_request["container"], "answer_id": action["selected_option"]["value"]}
