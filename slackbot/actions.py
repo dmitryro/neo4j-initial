@@ -1,10 +1,10 @@
 from datetime import datetime
 import logging
-from models import Pending, Mapping
+from models import Pending, Mapping, Deletable
 from utils import read_answer, store_answer, read_question
 from utils import  edit_answer, extend_answer
 from utils import decode, encode, respond, read_env
-from utils import respond_next
+from utils import respond_next, delete_ephemeral
 
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,10 @@ def preview_answer(payload):
     thing = payload['data']['text']#.split(None, 1)[1]
     answer = read_answer(thing)
     user = payload['data']['user']
-
+    message_ts = payload['data']['ts']
+    question_compressed = encode(thing)
+    channel_id = payload['data']['channel']
+    
     if not answer:
         p = Pending(username=f"{user}", real_name=f"{user}", question=thing)
         p.save()
@@ -69,20 +72,26 @@ def preview_answer(payload):
         if not p:
             p = Pending(username=user, real_name=user, question=thing)
             p.save()
-
+    answer_compressed = encode(answer)
+    deletable = Deletable(question_compressed=question_compressed, 
+                          answer_compressed=answer_compressed,
+                          channel_id=channel_id,
+                          message_ts=message_ts)
+    deletable.save()    
     preview_answer=f'Hi admin! The user <@{user}> just asked' # "{thing}" and the answer I\'m suggesting is "{answer}" - please approve or dismiss!'   
     respond(payload, text=preview_answer, question=thing, answer=answer, ephemeral=True)
 
 
-def answer_next(answer:str, user:dict, channel_id:str, action='approve'):
+def answer_next(answer:str, user:dict, channel_id:str, trigger_id, action='approve'):
     try:
+        message_ts = ''
         answer = decode(answer)
         mapping = Mapping.latest(answer)
         question = decode(mapping.question_compressed)
     except Exception as e:
         logger.error(f"--> Something went wrong in answer processing, no mapping found -  {e}")
         question  = read_question(answer) 
-    respond_next(answer, question, user, channel_id, action=action)
+    respond_next(answer, question, user, channel_id, trigger_id, action=action)
 
 
 def store(payload):

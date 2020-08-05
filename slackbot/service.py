@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 @app.service
 class FaustService(faust.Service):
-
     async def on_start(self) -> None:
         try:
             await bot.run()
@@ -36,32 +35,34 @@ class FaustService(faust.Service):
 
 @app.agent(dismissal_topic)
 async def processs_dismissals(dismissals) -> None:
-    logger.info("HEY! USER DISMISSED SOMETHING!!!!!!")
-    async for dismissal in dismissals: 
+    async for dismissal in dismissals:
+        logger.info(f"ANOTHER DISMISSAL {dismissal}") 
         user = dismissal['user']
         channel_id = dismissal['channel']['id']
+        message_ts = dismissal['container']['message_ts']
         answer = dismissal['actions'][0]['selected_option']['value'].split('dismiss_')[1]
-        answer_next(answer, user, channel_id, action='dismiss')
+        answer_next(answer, user, channel_id, None, action='dismiss')
 
 
 @app.agent(approval_topic)
 async def processs_approvals(approvals) -> None:
-    logger.info("HEY! USER APPROVED SOMETHING!!!!!!")
     async for approval in approvals:  # type: str
         user = approval['user']
         channel_id = approval['channel']['id']
+        message_ts = approval['container']['message_ts']
         answer = approval['actions'][0]['selected_option']['value'].split('approve_')[1]
-        answer_next(answer, user, channel_id, action='approve')
+        answer_next(answer, user, channel_id, None, action='approve')
 
 
 @app.agent(editing_topic) 
 async def processs_editings(editings) -> None:
-    logger.info("HEY! USER IS EDITING SOMETHING!!!!!!")
     async for editing in editings:  # type: str
         user = editing['user']
+        trigger_id = editing.get('trigger_id', None)
         channel_id = editing['channel']['id']
+        message_ts = editing['container']['message_ts']
         answer = editing['actions'][0]['selected_option']['value'].split('edit_')[1]
-        answer_next(answer, user, channel_id, action='edit')
+        answer_next(answer, user, channel_id, trigger_id, action='edit')
 
 
 @app.timer(2.5)

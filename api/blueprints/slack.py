@@ -52,7 +52,12 @@ def slack_action():
         slack_req_type = slack_req_body.get("type")
 
         action = {"block_actions": process_block_actions, "dialog_submission": process_dialogs}
-        action_selected = slack_req_body["actions"][0]["selected_option"]["value"]
+
+        if slack_req_body["actions"][0].get("selected_option", None):        
+            action_selected = slack_req_body["actions"][0]["selected_option"]["value"]
+        else:
+            action_selected = slack_req_body['actions'][0]['selected_options'][0]['value']
+
         trigger_id = slack_req_body["trigger_id"] 
         user = slack_req_body["user"]
         container = slack_req_body["container"]

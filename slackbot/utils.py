@@ -37,6 +37,9 @@ def obtain_session():
     return session()
 
 
+def read_modal(answer):
+    pass
+
 def read_blocks(text=None, question=None, answer=default_answer):
 
     if question:
@@ -143,7 +146,19 @@ def read_blocks(text=None, question=None, answer=default_answer):
     return blocks
 
 
-def respond_next(answer, question, user, channel_id, action='approve'):
+def delete_ephemeral(channel_id, message_ts):
+    token=read_env("SLACK_TOKEN")
+    try:
+        client.chat_delete(token=token,
+                           channel=channel_id,
+                           ts=message_ts)    
+        logger.info(f"Deleted ephemeral message from channel {channel_id} with timestamp {message_ts}")
+    except Exception as e:
+        logger.error(f"Failed deleting ephemeral message from channel {channel_id} with timestamp {message_ts}")
+        
+
+def respond_next(answer, question, user, channel_id, trigger_id, action='approve'):
+    token=read_env("SLACK_TOKEN")
     if action == 'approve':
         try:
             user_id = user['id']
@@ -175,19 +190,82 @@ def respond_next(answer, question, user, channel_id, action='approve'):
                 username='kbpro',
                 thread_ts=None #thread_ts 
             ) 
-
-
         except SlackApiError as e:
             # You will get a SlackApiError if "ok" is False
             assert e.response["ok"] is False
             assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
-            logger.error(f"Got an error in respond approved : {e.response['error']}")
+            logger.error(f"Got an error in dismissed : {e.response['error']}")
         
     elif action == 'edit':
         try: 
             user_id = user['id']
             username = user['username']
-            
+
+            #client.views_open(trigger_id=trigger_id,
+            #                  view=read_modal(answer))
+
+
+            api_response = client.views_open(
+              trigger_id=trigger_id,
+              view={
+                "type": "modal",
+                "callback_id": "modal-id",
+                "title": {
+                  "type": "plain_text",
+                  "text": "Edit Answer"
+                },
+                "submit": {
+                  "type": "plain_text",
+                  "text": "Submit"
+                },
+                "close": {
+                  "type": "plain_text",
+                  "text": "Cancel"
+                },
+                "blocks": [
+                  {
+                    "type": "input",
+                    "block_id": "b-id",
+                    "label": {
+                      "type": "plain_text",
+                      "text": "Edit Answer",
+                    },
+                    "element": {
+                      "action_id": "a-id",
+                      "type": "plain_text_input",
+                      "action_id": "ml_input",
+                      "multiline": True,
+                      "placeholder": {
+                              "type": "plain_text",
+                              "text": answer
+                      }
+
+                    }
+                  },
+                  {
+                      "type": "section",
+                      "text": {
+                          "type": "mrkdwn",
+                          "text": " "
+                      },
+                      "accessory": {
+                          "type": "checkboxes",
+                          "options": [
+                              {
+                                  "text": {
+                                      "type": "mrkdwn",
+                                      "text": "Make this change permanent"
+                                  },
+                                  "value": "value_permanent"
+                              }
+                          ]
+                      }
+                  }
+
+                ]
+              }
+        )            
+
             response = client.chat_postEphemeral(
                 channel=channel_id,
                 user=user_id,
@@ -197,12 +275,11 @@ def respond_next(answer, question, user, channel_id, action='approve'):
                 username='kbpro',
                 thread_ts=None #thread_ts 
             )  
- 
         except SlackApiError as e: 
             # You will get a SlackApiError if "ok" is False 
             assert e.response["ok"] is False
             assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found' 
-            logger.error(f"Got an error in respond approved : {e.response['error']}")      
+            logger.error(f"Got an error in respond edit : {e.response['error']}")      
 
     else:
         pass
@@ -330,10 +407,3 @@ def read_answer(msg):
         return default_answer
     else:
         return answer.decode('utf-8')
-
-
-
-
-
-
-

@@ -1,3 +1,4 @@
+import logging
 import asyncio
 from flask import make_response
 import json
@@ -7,6 +8,7 @@ from slack import WebClient
 import websockets
 from kafka import KafkaProducer
 
+logger = logging.getLogger(__name__)
 read_env = lambda property: os.environ.get(property, None)
 producer = KafkaProducer(bootstrap_servers='kafka:9092') 
                          #value_serializer=lambda v: json.dumps(v).encode('utf-8'), 
@@ -46,22 +48,30 @@ def process_block_actions(slack_request: dict):
     """
     msg = json.dumps(slack_request).encode('utf-8')
     action = slack_request["actions"][0]
-     
-    if 'approve_' in action["selected_option"]["value"]: 
-        redis_store(msg, 'approve')
-        producer.send('approve', key=bytes(msg), value=bytes(msg))
-    elif 'dismiss_' in  action["selected_option"]["value"]:
-        redis_store(msg, 'dismiss')
-        producer.send('dismiss', key=bytes(msg), value=bytes(msg)) 
-    elif 'edit_' in action["selected_option"]["value"]:
-        redis_store(msg, 'edit')
-        producer.send('edit', key=bytes(msg), value=bytes(msg))    
+    if action.get('selected_options', None):
+        logger.info("CASE 111 ----------------------------------")
+        if '_permanent' in action['selected_options'][0]['value']:
+            value = action['selected_options'][0]['value']
+        else:
+            value = ""
     else:
-        producer.send('dismiss', key=bytes(msg), value=bytes(msg))
+        logger.info("CASE 222 ----------------------------------")
+        value = action["selected_option"]["value"] 
+        logger.info(f"THIS IS OUR CASE IN API {slack_request}")
 
-    #asyncio.get_event_loop().run_until_complete(poke('ws://slackbot:8765', msg))
-    action = slack_request["actions"][0]
-    state_data = {"container": slack_request["container"], "answer_id": action["selected_option"]["value"]}
+        if 'approve_' in value: 
+            redis_store(msg, 'approve')
+            producer.send('approve', key=bytes(msg), value=bytes(msg))
+        elif 'dismiss_' in value:
+            redis_store(msg, 'dismiss')
+            producer.send('dismiss', key=bytes(msg), value=bytes(msg)) 
+        elif 'edit_' in value:
+            redis_store(msg, 'edit')
+            producer.send('edit', key=bytes(msg), value=bytes(msg))    
+        else:
+            producer.send('dismiss', key=bytes(msg), value=bytes(msg))
+
+    state_data = {"container": slack_request["container"], "answer_id": value}
 
     if action["action_id"] == "answer_action":
         return make_response()
