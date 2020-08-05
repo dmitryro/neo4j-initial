@@ -23,6 +23,7 @@ CREATE TABLE pending (
         real_name varchar(200) NOT NULL,
         question varchar(2048),
         date_asked timestamptz NOT NULL,
+        is_approved BOOLEAN DEFAULT FALSE,
         date_answered timestamptz DEFAULT NULL); 
 
 CREATE SEQUENCE mapping_id_seq;

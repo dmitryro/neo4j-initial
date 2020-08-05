@@ -4,6 +4,8 @@ from models import Pending, Mapping
 from utils import read_answer, store_answer, read_question
 from utils import  edit_answer, extend_answer
 from utils import decode, encode, respond, read_env
+from utils import respond_approved
+
 
 logger = logging.getLogger(__name__)
 default_answer = read_env("SLACK_DEFAULT_ANSWER")
@@ -11,8 +13,41 @@ default_answer = read_env("SLACK_DEFAULT_ANSWER")
 
 def answer(payload):
     """ Anaswer a slack request """
+    logger.info(f"-----------> PAYLOAD ANSWER {payload}")
+    thing = payload['data']['text']#.split(None, 1)[1]
+    answer = read_answer(thing)
+    user = payload['data']['user']
 
-    thing = payload['data']['text'].split(None, 1)[1]
+    if not answer:
+        p = Pending(username=f"{user}", real_name=f"{user}", question=thing)
+        p.save()
+        answer = default_answer
+        ephemeral=True
+    else:
+        ephemeral=False
+        mapping = Mapping.latest_by_question(thing)
+        if mapping:
+            mapping.compressed_answer = encode(answer)
+            mapping.update()
+
+        else:
+            mapping = Mapping(answer_compressed=str(encode(answer)),
+                              question_compressed=str(encode(thing)), version=0.01)
+            mapping.save()
+
+        p = Pending.latest_by_question(thing)
+        if not p:
+            p = Pending(username=user, real_name=user, question=thing)
+            p.save()
+    
+    respond(answer, payload, ephemeral=ephemeral)
+
+
+def preview_answer(payload):
+    """ Anaswer a slack request """
+    logger.info(f"-----------> PAYLOAD PREVIEW ANSWER {payload}")
+
+    thing = payload['data']['text']#.split(None, 1)[1]
     answer = read_answer(thing)
     user = payload['data']['user']
 
@@ -38,11 +73,33 @@ def answer(payload):
             p = Pending(username=user, real_name=user, question=thing)
             p.save()
 
-    respond(answer, payload, ephemeral=ephemeral)
+    logger.info(f"STEP 1 HERE IS WHAT OUR USER IS LIKE {user}")
+    preview_answer=f'Hi admin! The user <@{user}> just asked' # "{thing}" and the answer I\'m suggesting is "{answer}" - please approve or dismiss!'   
+    logger.info(f"STEP 1.2 {preview_answer}")
+
+    respond(payload, text=preview_answer, question=thing, answer=answer, ephemeral=True)
+
+
+def answer_approved(answer:str, user:dict, channel_id:str):
+    try:
+        answer = decode(answer)
+        mapping = Mapping.latest(answer)
+        question = decode(mapping.compressed_question)
+        respond_approved(answer, question, user, channel_id)
+        logger.info(f"--> We sent {answer} -- {question} -- {user}")
+    except Exception as e:
+        logger.error(f"--> Something went wrong in answer_approvedi, no mapping found -  {e}")
+        question  = read_question(answer) 
+
+    logger.info(f"STEP 1.5 HERE IS WHAT OUR USER IS LIKE {user['id']}")
+    preview_answer=f'Hi admin! The user <@{user["id"]}> just asked' # "{thing}" and the answer I\'m suggesting is "{answer}" - please approve or dismiss!'   
+    logger.info(f"STEP 1.6 HERE {preview_answer}")
+    respond_approved(answer, question, user, channel_id)
 
 
 def store(payload):
     """ """
+    logger.info(f"-----------> PAYLOAD PREVIEW STORE {payload}")
     try:
         thing = payload['data']['text'].split(None, 1)[1]
         logger.info(f"WE WILL TRY TO STORE -- {thing} ")
@@ -62,7 +119,7 @@ def store(payload):
         logger.error(f"Was unable to store the answer {e}")
         msg = f'Was unable to store a response - pending question not found {e}'
 
-    respond(msg, payload, ephemeral=True)
+    respond(payload, text=msg, ephemeral=True)
 
 
 def relate(payload):
@@ -74,7 +131,7 @@ def relate(payload):
         logger.error(f"Was unable to store the answer {e}")
         msg = f'Was unable to store a response - pending question not found {e}'
 
-    respond(msg, payload, ephemeral=True)
+    respond(payload, text=msg, ephemeral=True)
 
 
 def edit(payload):
@@ -82,7 +139,6 @@ def edit(payload):
     try:
         thing = payload['data']['text'].split(None, 1)[1]
         mapping = Mapping.latest(thing)
-        logger.info(f"WE WILL TRY TO EDIT {thing}")
 
         if mapping:
             answer = decode(mapping.answer_compressed)
@@ -107,9 +163,9 @@ def edit(payload):
         logger.error(f"Was unable to amend/edit the answer {e}")
         msg = f'Was unable to amend/edit - mapping not found {e}'
 
-    respond(msg, payload, ephemeral=True)
+    respond(payload, text=msg, ephemeral=True)
 
 
 def misc_message(payload):
     """ Need more clarity """
-    respond(default_answer, payload, ephemeral=True)
+    respond(payload, text=f"MISC - {default_answer}", ephemeral=True)

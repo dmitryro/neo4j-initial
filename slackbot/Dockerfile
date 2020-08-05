@@ -11,7 +11,7 @@ ENV SCHEMA_REGISTRY_SERVER schema-registry:8081
 ENV NEO4J_SERVER neo4j
 ENV NEO4J_SERVER_PORT=7687
 ENV HOST 0.0.0.0
-ENV PORT 8001
+ENV PORT 8765
 ENV DEBUG true
 
 COPY . /slackbot
@@ -29,7 +29,7 @@ RUN apk update \
 # install requirements
 RUN pip install -r requirements.txt
 # expose the app port
-
+EXPOSE 8765 
 ENTRYPOINT ["./wait_for_services.sh"]
 
 CMD ["./run.sh", "${WORKER}", "${WORKER_PORT}", "${CONFIG_CLASS}"]

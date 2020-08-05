@@ -1,3 +1,5 @@
+from datetime import datetime
+import faust
 import logging
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -8,6 +10,25 @@ from utils import obtain_session, encode
 logger = logging.getLogger(__name__)
 
 Base = declarative_base()
+
+
+class Question(faust.Record, isodates=True, serializer='json'):
+    question: str
+    timestamp: datetime
+
+
+class Answer(faust.Record, isodates=True, serializer='json'):
+    question: str
+    answer: str
+    timestamp: datetime
+
+
+class Addition(faust.Record, isodates=True, serializer='json'):
+    answer: str
+    index: int
+    text: str
+    timestamp: datetime
+
 
 class Mapping(Base):
     id = Column(Integer, primary_key=True)
@@ -85,7 +106,6 @@ class Mapping(Base):
         m = s.query(Mapping).get(id)
         return m
 
-
 class Pending(Base):
     """ The user record to save in Postgres """
 
@@ -99,6 +119,7 @@ class Pending(Base):
                                     server_default=func.now(),
                                     nullable=True,
                                     default=None)
+    is_approved = Column(Boolean(), default=False)
 
     __tablename__ = "pending"
 
@@ -107,7 +128,7 @@ class Pending(Base):
         self.question = question
         self.real_name = real_name
         self.date_asked = func.now()
-
+        self.is_approved = False
 
     def save(self):
         """ Save pending """
@@ -147,7 +168,7 @@ class Pending(Base):
         query = s.query(Pending).filter(and_(Pending.id == self.id, 
                                              Pending.username == self.username, 
                                              Pending.date_answered == None))
-        query.update({"date_answered": func.now()}, synchronize_session=False)
+        query.update({"date_answered": func.now(), "is_approved": True}, synchronize_session=False)
         s.commit()
 
 

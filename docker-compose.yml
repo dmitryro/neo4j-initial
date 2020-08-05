@@ -9,6 +9,8 @@ services:
       - pg_data:/var/lib/postgresql/pg_data
     env_file:
       - .env
+    networks:
+      - neo4j_net
     ports:
       - "5432:5432"
     restart: always # ignored when deploying a stack in swarm mode or kubernetes
@@ -16,22 +18,27 @@ services:
       restart_policy:
         condition: on-failure
 
-#  api:
-#    container_name: ${PROJECT_NAME}-api
-#    build:
-#      context: ./api
-#      dockerfile: Dockerfile
-#    restart: always
-#    ports:
-#     - "5000:5000"
-#    depends_on:
-#      - redis
-#    env_file:
-#      - .env
-#    volumes:
-#      - ./api/:/usr/app
-#    networks:
-#        - neo4j_net
+  api:
+    container_name: ${PROJECT_NAME}-api
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+     - 5000:5000
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - kafka
+      - redis
+      - neo4j
+    env_file:
+      - .env
+    networks:
+      - neo4j_net
+    volumes:
+      - './api/:/usr/app'
 
   neo4j:
     container_name: ${PROJECT_NAME}-neo4j
@@ -48,19 +55,25 @@ services:
     volumes:
       - ./neo4j:/neo4j
       - neo4j__data:/data
+    networks:
+      - neo4j_net
     deploy:
       replicas: 1
 
   slackbot:
     container_name: ${PROJECT_NAME}-slackbot
-    build: ./slackbot
+    build: 
+      context: ./slackbot
+      dockerfile: Dockerfile
     restart: always
     env_file:
       - .env
     depends_on:
-      - daemon
       - redis
-
+    networks:
+      - neo4j_net
+    ports:
+      - 8765:8765
   kafka:
     container_name: ${PROJECT_NAME}-kafka
     env_file:
@@ -69,6 +82,8 @@ services:
     ports:
       - 29092:29092
       - 9092:9092
+    networks:
+      - neo4j_net
     deploy:
       replicas: 1
     depends_on:
@@ -82,6 +97,8 @@ services:
     ports:
       - 32181:32181
       - 2181:2181
+    networks:
+      - neo4j_net
     volumes:
       - zoo_data:/data
       - zoo_datalog:/datalog
@@ -110,9 +127,14 @@ services:
       - kafka
       - redis
       - neo4j
+    networks:
+      - neo4j_net
     volumes:
       - './daemon/:/usr/app'
-
+    ports:
+      - 19091:19091
+      - 8001:8001
+    
 #  neo4j_browser:
 #    container_name: ${PROJECT_NAME}-browser
 #    build: ./neo4j_browser
@@ -143,6 +165,8 @@ services:
       - kafka
     ports:
       - "8081:8081"
+    networks:
+      - neo4j_net
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: "zookeeper:2181"
@@ -154,7 +178,8 @@ services:
       - "6379:6379"
     env_file:
       - .env
-
+    networks:
+      - neo4j_net
 
 networks:
   neo4j_net:

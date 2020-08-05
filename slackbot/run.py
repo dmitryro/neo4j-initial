@@ -1,8 +1,10 @@
+import asyncio
+import aiotools
 import sys
 import logging
 import logging.config
 import settings
-from bot import Bot
+from bot import bot
 
 def main():
     kw = {
@@ -13,7 +15,6 @@ def main():
     }
     logging.basicConfig(**kw)
     logging.getLogger('requests.packages.urllib3.connectionpool').setLevel(logging.WARNING)
-    bot = Bot()
     bot.run()
 
 if __name__ == '__main__':

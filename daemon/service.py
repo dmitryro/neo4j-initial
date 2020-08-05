@@ -6,12 +6,11 @@ from aredis import StrictRedis
 import asyncio
 from datetime import datetime
 import faust
-from graph import find_answer, add_question, edit_question
+from graph import find_answer, find_question, add_question, edit_question
 import json
 import logging
 from redis import StrictRedis as RegularStrictRedis
 from time import sleep
-
 from models import Answer, Question
 from utils import decode, encode, read_env
 
@@ -26,9 +25,9 @@ ar = StrictRedis(**redis)
 default_answer = read_env("SLACK_DEFAULT_ANSWER")
 
 app = faust.App('service-ask', broker=read_env('KAFKA_LISTENER'))
+approval_topic = app.topic('approval')
 answers_table = app.Table('answers', default=str)
 questions_table = app.Table('questions', default=str)
-
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +39,13 @@ class FaustService(faust.Service):
 
     async def on_stop(self) -> None:
         self.log.info('STOPPED')
+
+
+@app.agent(approval_topic)
+async def check_approvals(approvals) -> None:
+    async for approval in approvals:  # type: str
+        item = approval
+        logger.info(f"PROCESSING APPROVAL : {item}...")
 
 
 @app.agent(value_type=str)
