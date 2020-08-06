@@ -15,6 +15,28 @@ ALTER ROLE postgres SET default_transaction_isolation TO 'read committed';
 ALTER ROLE postgres SET timezone TO 'America/New_York';
 GRANT ALL PRIVILEGES ON DATABASE postgres TO postgres;
 
+CREATE SEQUENCE permanent_id_seq;
+
+CREATE TABLE permanent (
+    id integer NOT NULL DEFAULT nextval('permanent_id_seq'),
+    action_ts varchar(250),
+    action_id varchar(250),
+    value varchar(250),
+    token varchar(250),
+    date_added timestamptz DEFAULT NOW()
+);
+
+CREATE SEQUENCE deletable_id_seq;
+
+CREATE TABLE deletable (
+    id integer NOT NULL DEFAULT nextval('deletable_id_seq'),
+    message_ts varchar(200),
+    answer_compressed varchar(250),
+    question_compressed varchar(250),
+    channel_id varchar(250),
+    date_addedd timestamptz DEFAULT NOW());
+
+
 CREATE SEQUENCE pending_id_seq;
 
 CREATE TABLE pending (
@@ -254,7 +276,6 @@ CREATE TABLE logentries (
         FOREIGN KEY(action_id) REFERENCES actions(id) ON DELETE CASCADE
 );
 
-
 ALTER SEQUENCE event_id_seq
 OWNED BY events.id;
 
@@ -299,3 +320,10 @@ OWNED BY pending.id;
 
 ALTER SEQUENCE mapping_id_seq
 OWNED BY mappings.id;
+
+ALTER SEQUENCE deletable_id_seq
+OWNED BY deletable.id;
+
+ALTER SEQUENCE permanent_id_seq
+OWNED BY permanent.id;
+

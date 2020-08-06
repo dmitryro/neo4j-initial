@@ -238,8 +238,8 @@ def respond_next(answer, question, user, channel_id, trigger_id, action='approve
                       "placeholder": {
                               "type": "plain_text",
                               "text": answer
-                      }
-
+                      },
+                      "initial_value": answer
                     }
                   },
                   {

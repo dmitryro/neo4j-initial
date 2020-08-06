@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-from models import Pending, Mapping, Deletable
+from models import Pending, Mapping, Deletable, Permanent
 from utils import read_answer, store_answer, read_question
 from utils import  edit_answer, extend_answer
 from utils import decode, encode, respond, read_env
@@ -80,6 +80,35 @@ def preview_answer(payload):
     deletable.save()    
     preview_answer=f'Hi admin! The user <@{user}> just asked' # "{thing}" and the answer I\'m suggesting is "{answer}" - please approve or dismiss!'   
     respond(payload, text=preview_answer, question=thing, answer=answer, ephemeral=True)
+
+
+def submit_edited(payload:dict):
+    action_id = payload["view"]["blocks"][1]["accessory"]["action_id"]
+    token = payload["token"]
+    p = Permanent.find_by_action(action_id=action_id, token=token)
+    if p:
+        logger.info(f"WE ARE MAKING IT PERMANENT {payload} - {p.action_id} - {p.value} {p.action_ts} - {p.token}")
+    else:
+        logger.info(f"WE ARE MAKING IT TEMPORARY {payload}")
+
+
+def make_nonpermanent(payload:dict):
+    try:
+        action_id=payload["actions"][0]["action_id"]
+        token=payload["token"]
+        Permanent.delete_by_action(token=token, action_id=action_id)
+        logger.info(f"WE ARE MAKING IT NONPERMANENT for {action_id} {token}")
+    except Exception as e:
+        logger.error(f"We failed deleting non-permanent item {e}")
+
+
+def make_permanent(payload:dict):
+    p = Permanent(action_id=payload["actions"][0]["action_id"],
+                  action_ts=payload["actions"][0]["action_ts"],
+                  value=payload["actions"][0]["selected_options"][0]["value"],
+                  token=payload["token"])
+    p.save()              
+    logger.info(f"WE ARE MAKING IT PERMANENT for {p.value}")
 
 
 def answer_next(answer:str, user:dict, channel_id:str, trigger_id, action='approve'):

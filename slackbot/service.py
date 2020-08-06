@@ -5,7 +5,7 @@ import json
 import logging
 import os
 from utils import read_env, read_approved
-from actions import answer_next
+from actions import answer_next, submit_edited, make_permanent, make_nonpermanent
 from bot import bot
 #from kafka import KafkaConsumer
 
@@ -13,6 +13,9 @@ app = faust.App('slackbot-service-ask', broker=read_env('KAFKA_LISTENER'))
 approval_topic = app.topic("approve")
 editing_topic = app.topic("edit") 
 dismissal_topic = app.topic("dismiss")
+make_permanent_topic = app.topic("make_permanent")
+make_nonpermanent_topic = app.topic("make_nonpermanent")
+submit_edited_topic = app.topic("submit_edited")
 answers_table = app.Table("answers", default=str)
 questions_table = app.Table("questions", default=str)
 
@@ -31,6 +34,27 @@ class FaustService(faust.Service):
 
     async def on_stop(self) -> None:
         self.log.info('STOPPED')
+
+
+@app.agent(make_nonpermanent_topic)
+async def processs_nonpermanent(checkboxes) -> None:
+    async for payload in checkboxes:
+        logger.info(f"ANOTHER NONPERMANENT CHECKBOX  {payload}")
+        make_nonpermanent(payload)
+
+
+@app.agent(make_permanent_topic)
+async def processs_permanent(checkboxes) -> None:
+    async for payload in checkboxes:
+        logger.info(f"ANOTHER CHECKBOX  {payload}") 
+        make_permanent(payload)
+
+
+@app.agent(submit_edited_topic)
+async def processs_submissions(submissions) -> None:
+    async for payload in submissions:
+        logger.info(f"ANOTHER SUBMISSION {payload}")
+        submit_edited(payload)
 
 
 @app.agent(dismissal_topic)
