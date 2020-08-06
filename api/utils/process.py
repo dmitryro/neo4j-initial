@@ -1,6 +1,7 @@
 import logging
 import asyncio
-from flask import make_response
+from flask import jsonify,  make_response
+from flask_api import status
 import json
 import os
 from redis import StrictRedis as RegularStrictRedis
@@ -52,7 +53,6 @@ def process_block_actions(slack_request: dict):
     if action.get('selected_options', None):
         if '_permanent' in action['selected_options'][0]['value']:
             value = action['selected_options'][0]['value']
-            logger.info("HEI HEI HEI HEI! THIS IS OUR CASE HERE======================================")
             producer.send('make_permanent', key=bytes(msg), value=bytes(msg))
         else:
             value = ""
@@ -77,13 +77,14 @@ def process_block_actions(slack_request: dict):
 
 
     #if action["action_id"]: == "answer_action":
-    return make_response()
-    #return make_response("Unable to process action", 400)
+    result = {} 
+    return make_response(jsonify(result), status.HTTP_204_NO_CONTENT)
 
 
 def process_dialogs(slack_request: dict):
     msg = json.dumps(slack_request).encode('utf-8')
     producer.send('submit_edited', key=bytes(msg), value=bytes(msg))   
     logger.info("Sent Kafka topic message")
-    return make_response("Finished", 200)     
+    result = {}
+    return make_response(jsonify(result), status.HTTP_204_NO_CONTENT)
 
