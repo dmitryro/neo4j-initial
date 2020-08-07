@@ -53,21 +53,18 @@ async def process_record_channel(channels) -> None:
 @app.agent(make_nonpermanent_topic)
 async def processs_nonpermanent(checkboxes) -> None:
     async for payload in checkboxes:
-        logger.info(f"ANOTHER NONPERMANENT CHECKBOX  {payload}")
         make_nonpermanent(payload)
 
 
 @app.agent(make_permanent_topic)
 async def processs_permanent(checkboxes) -> None:
     async for payload in checkboxes:
-        logger.info(f"ANOTHER CHECKBOX  {payload}") 
         make_permanent(payload)
 
 
 @app.agent(submit_edited_topic)
 async def processs_submissions(submissions) -> None:
     async for payload in submissions:
-        logger.info(f"ANOTHER SUBMISSION {payload}")
         submit_edited(payload)
 
 
