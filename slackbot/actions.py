@@ -18,7 +18,24 @@ def fetch_question(answer):
     except Exception as e:
         logger.error(f"--> Something went wrong in answer processing, no mapping found -  {e}")
         question  = read_question(answer)
+        m = Mapping(answer_compressed=str(encode(answer)),
+                    question_compressed=str(encode(question)), version=0.01)
     return question
+
+
+def update_store(question, answer):
+
+    m = Mapping.latest_by_question(question)
+    if m:
+        logger.info("Mapping found - updating naswer to be {answer}")
+        Mapping.update_answer(question, answer)
+    else:
+        logger.info("Mapping not found - creating a new one with aswer \"{answer}\" and \"{question}\"")
+        m = Mapping(answer_compressed=str(encode(answer)),
+                    question_compressed=str(encode(question)), version=0.01)                
+        m.save()
+    store_answer(question, answer)
+    return True
 
 
 def submit_edited(payload:dict):
@@ -40,9 +57,11 @@ def submit_edited(payload:dict):
     try:
         p = Permanent.find_by_action(action_id, token)
         if p:
+            update_store(question, answer)
             logger.info(f"We are updating or original answer \"{original_answer}\" with \"{answer}\"")
     except Exception as e:
         logger.error("Failed processing permanent {e}")
+    answer_next(encode(answer), user, channel_id, None, action='approve')
 
 
 def record_channel(payload:dict):
@@ -148,13 +167,23 @@ def make_permanent(payload:dict):
                   value=payload["actions"][0]["selected_options"][0]["value"],
                   token=payload["token"])
     p.save()              
-    logger.info(f"WE ARE MAKING IT PERMANENT for {p.value}")
 
 
 def answer_next(answer:str, user:dict, channel_id:str, trigger_id, action='approve'):
-    logger.info(f"NOT SURE HOW WE ENDED UP HERE BUT HERE WE ARE {action}")
     question = fetch_question(decode(answer))
     respond_next(decode(answer), question, user, channel_id, trigger_id, action=action)
+
+
+def update_store(question, answer):
+    m = Mapping.latest_by_question(question)
+    if m:
+        Mapping.update_answer(question, answer)
+    else:
+        m = Mapping(answer_compressed=str(encode(answer)),
+                    question_compressed=str(encode(question)), version=0.01)
+        m.save()
+    store_answer(question, answer)
+    return True
 
 
 def store(payload):
@@ -164,11 +193,8 @@ def store(payload):
         p = Pending.latest()
 
         if p:
-            m = Mapping(answer_compressed=str(encode(thing)),
-                        question_compressed=str(encode(p.question)), version=0.01)
-            m.save()
+            update_store(p.question, thing)
             p.mark_as_answered()
-            store_answer(p.question, thing)
             msg = f'Stored answer to question by  <@{p.username}>:  {thing}'
         else:
             msg = "I was unable to store a response"

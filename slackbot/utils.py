@@ -38,7 +38,63 @@ def obtain_session():
 
 
 def read_modal(answer):
-    pass
+    modal={
+        "type": "modal",
+        "callback_id": "modal-id",
+        "title": {
+            "type": "plain_text",
+            "text": "Edit Answer"
+        },
+        "submit": {
+            "type": "plain_text",
+            "text": "Submit"
+        },
+        "close": {
+            "type": "plain_text",
+            "text": "Cancel"
+        },
+        "blocks": [
+            {
+            "type": "input",
+            "block_id": "b-id",
+            "label": {
+                "type": "plain_text",
+                "text": "Edit Answer",
+            },
+            "element": {
+                "action_id": "a-id",
+                "type": "plain_text_input",
+                "action_id": "ml_input",
+                "multiline": True,
+                "placeholder": {
+                        "type": "plain_text",
+                        "text": answer
+                },
+                "initial_value": answer
+            }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": " "
+                },
+                "accessory": {
+                    "type": "checkboxes",
+                    "options": [
+                        {
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "Make this change permanent"
+                            },
+                            "value": "value_permanent"
+                        }
+                    ]
+                }
+            }
+        ]
+        }
+    return modal
 
 def read_blocks(text=None, question=None, answer=default_answer):
 
@@ -197,74 +253,16 @@ def respond_next(answer, question, user, channel_id, trigger_id, action='approve
             logger.error(f"Got an error in dismissed : {e.response['error']}")
         
     elif action == 'edit':
-        try: 
+        try:
+            view = read_modal(answer)
+            logger.info(f"WATCH ! OUR VIEW {view}") 
             user_id = user['id']
             username = user['username']
 
-            #client.views_open(trigger_id=trigger_id,
-            #                  view=read_modal(answer))
-
-
             api_response = client.views_open(
               trigger_id=trigger_id,
-              view={
-                "type": "modal",
-                "callback_id": "modal-id",
-                "title": {
-                  "type": "plain_text",
-                  "text": "Edit Answer"
-                },
-                "submit": {
-                  "type": "plain_text",
-                  "text": "Submit"
-                },
-                "close": {
-                  "type": "plain_text",
-                  "text": "Cancel"
-                },
-                "blocks": [
-                  {
-                    "type": "input",
-                    "block_id": "b-id",
-                    "label": {
-                      "type": "plain_text",
-                      "text": "Edit Answer",
-                    },
-                    "element": {
-                      "action_id": "a-id",
-                      "type": "plain_text_input",
-                      "action_id": "ml_input",
-                      "multiline": True,
-                      "placeholder": {
-                              "type": "plain_text",
-                              "text": answer
-                      },
-                      "initial_value": answer
-                    }
-                  },
-                  {
-                      "type": "section",
-                      "text": {
-                          "type": "mrkdwn",
-                          "text": " "
-                      },
-                      "accessory": {
-                          "type": "checkboxes",
-                          "options": [
-                              {
-                                  "text": {
-                                      "type": "mrkdwn",
-                                      "text": "Make this change permanent"
-                                  },
-                                  "value": "value_permanent"
-                              }
-                          ]
-                      }
-                  }
-
-                ]
-              }
-        )            
+              view=view,
+            )            
         except SlackApiError as e: 
             # You will get a SlackApiError if "ok" is False 
             assert e.response["ok"] is False
