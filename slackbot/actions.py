@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-from models import Pending, Mapping, Deletable, Permanent
+from models import Pending, Mapping, Deletable, Permanent, Channel
 from utils import read_answer, store_answer, read_question
 from utils import  edit_answer, extend_answer
 from utils import decode, encode, respond, read_env
@@ -9,6 +9,56 @@ from utils import respond_next, delete_ephemeral
 
 logger = logging.getLogger(__name__)
 default_answer = read_env("SLACK_DEFAULT_ANSWER")
+
+
+def fetch_question(answer):
+    try:
+        mapping = Mapping.latest(answer)
+        question = decode(mapping.question_compressed)
+    except Exception as e:
+        logger.error(f"--> Something went wrong in answer processing, no mapping found -  {e}")
+        question  = read_question(answer)
+    return question
+
+
+def submit_edited(payload:dict):
+    """ Submite edited answer """
+    action_id = payload["view"]["blocks"][1]["accessory"]["action_id"]
+    token = payload["token"]
+    user = payload["user"]
+    user_id = payload["user"]["id"]
+    team_id = payload["user"]["team_id"]
+    app_id = payload["api_app_id"]
+    channel = Channel.find_by_app(app_id, token, team_id, user_id)
+    channel_id = channel.channel_id
+    Channel.delete_by_app(app_id, token, team_id, user_id)
+    logger.info(f"WE ARE DONE EDITING {channel_id}")
+    original_answer = payload["view"]["blocks"][0]["element"]["initial_value"]
+    answer = payload["view"]["state"]["values"]["b-id"]["ml_input"]["value"]
+    question = fetch_question(original_answer)
+
+    try:
+        p = Permanent.find_by_action(action_id, token)
+        if p:
+            logger.info(f"We are updating or original answer \"{original_answer}\" with \"{answer}\"")
+    except Exception as e:
+        logger.error("Failed processing permanent {e}")
+
+
+def record_channel(payload:dict):
+    app_id = payload["api_app_id"]
+    token = payload["token"]
+    channel_id = payload["channel"]["id"]
+    team_id = payload["user"]["team_id"]
+    user_id = payload["user"]["id"]
+
+    c = Channel(app_id=app_id,
+                token=token,
+                channel_id=channel_id,
+                team_id=team_id,
+                user_id=user_id)
+    c.save()
+    logger.info(f"Saved channel information - {channel_id}")
 
 
 def answer(payload):
@@ -82,22 +132,12 @@ def preview_answer(payload):
     respond(payload, text=preview_answer, question=thing, answer=answer, ephemeral=True)
 
 
-def submit_edited(payload:dict):
-    action_id = payload["view"]["blocks"][1]["accessory"]["action_id"]
-    token = payload["token"]
-    p = Permanent.find_by_action(action_id=action_id, token=token)
-    if p:
-        logger.info(f"WE ARE MAKING IT PERMANENT {payload} - {p.action_id} - {p.value} {p.action_ts} - {p.token}")
-    else:
-        logger.info(f"WE ARE MAKING IT TEMPORARY {payload}")
-
-
 def make_nonpermanent(payload:dict):
     try:
         action_id=payload["actions"][0]["action_id"]
         token=payload["token"]
         Permanent.delete_by_action(token=token, action_id=action_id)
-        logger.info(f"WE ARE MAKING IT NONPERMANENT for {action_id} {token}")
+        logger.info(f"WE ARE MAKING IT NONPERMANENT ")
     except Exception as e:
         logger.error(f"We failed deleting non-permanent item {e}")
 
@@ -112,15 +152,9 @@ def make_permanent(payload:dict):
 
 
 def answer_next(answer:str, user:dict, channel_id:str, trigger_id, action='approve'):
-    try:
-        message_ts = ''
-        answer = decode(answer)
-        mapping = Mapping.latest(answer)
-        question = decode(mapping.question_compressed)
-    except Exception as e:
-        logger.error(f"--> Something went wrong in answer processing, no mapping found -  {e}")
-        question  = read_question(answer) 
-    respond_next(answer, question, user, channel_id, trigger_id, action=action)
+    logger.info(f"NOT SURE HOW WE ENDED UP HERE BUT HERE WE ARE {action}")
+    question = fetch_question(decode(answer))
+    respond_next(decode(answer), question, user, channel_id, trigger_id, action=action)
 
 
 def store(payload):

@@ -5,13 +5,15 @@ import json
 import logging
 import os
 from utils import read_env, read_approved
-from actions import answer_next, submit_edited, make_permanent, make_nonpermanent
+from actions import answer_next, submit_edited, make_permanent
+from actions import record_channel, make_nonpermanent
 from bot import bot
 #from kafka import KafkaConsumer
 
 app = faust.App('slackbot-service-ask', broker=read_env('KAFKA_LISTENER'))
 approval_topic = app.topic("approve")
-editing_topic = app.topic("edit") 
+record_channel_topic = app.topic("record_channel")
+editing_topic = app.topic("edit")
 dismissal_topic = app.topic("dismiss")
 make_permanent_topic = app.topic("make_permanent")
 make_nonpermanent_topic = app.topic("make_nonpermanent")
@@ -34,6 +36,18 @@ class FaustService(faust.Service):
 
     async def on_stop(self) -> None:
         self.log.info('STOPPED')
+
+
+@app.agent(submit_edited_topic)
+async def processs_submissions(submissions) -> None:
+    async for payload in submissions:
+        submit_edited(payload)
+
+
+@app.agent(record_channel_topic)
+async def process_record_channel(channels) -> None:
+    async for payload in channels:
+        record_channel(payload)
 
 
 @app.agent(make_nonpermanent_topic)
@@ -65,6 +79,7 @@ async def processs_dismissals(dismissals) -> None:
         channel_id = dismissal['channel']['id']
         message_ts = dismissal['container']['message_ts']
         answer = dismissal['actions'][0]['selected_option']['value'].split('dismiss_')[1]
+        logger.info("NOT SURE WHEY WE ARE GOING THERE 1")
         answer_next(answer, user, channel_id, None, action='dismiss')
 
 
@@ -75,6 +90,7 @@ async def processs_approvals(approvals) -> None:
         channel_id = approval['channel']['id']
         message_ts = approval['container']['message_ts']
         answer = approval['actions'][0]['selected_option']['value'].split('approve_')[1]
+        logger.info("NOT SURE WHEY WE ARE GOING THERE 2")
         answer_next(answer, user, channel_id, None, action='approve')
 
 
@@ -86,6 +102,7 @@ async def processs_editings(editings) -> None:
         channel_id = editing['channel']['id']
         message_ts = editing['container']['message_ts']
         answer = editing['actions'][0]['selected_option']['value'].split('edit_')[1]
+        logger.info("NOT SURE WHEY WE ARE GOING THERE 3")
         answer_next(answer, user, channel_id, trigger_id, action='edit')
 
 

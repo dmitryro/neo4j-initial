@@ -265,16 +265,6 @@ def respond_next(answer, question, user, channel_id, trigger_id, action='approve
                 ]
               }
         )            
-
-            response = client.chat_postEphemeral(
-                channel=channel_id,
-                user=user_id,
-                as_user=False,
-                icon_emoji=":chart_with_upwards_trend:",
-                text=f'Hi admin, please edit: {answer}',
-                username='kbpro',
-                thread_ts=None #thread_ts 
-            )  
         except SlackApiError as e: 
             # You will get a SlackApiError if "ok" is False 
             assert e.response["ok"] is False

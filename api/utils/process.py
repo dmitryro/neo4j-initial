@@ -31,25 +31,24 @@ def redis_store(msg, key):
 def process_block_actions(slack_request: dict):
     """
     Slack Action processor.
-
     Here we are going to process decoded slack request "block actions"
     https://api.slack.com/reference/messaging/blocks#actions
-
     Example request: example-data/block_action.json
-
     We will present user with 2 buttons.
     1. Open dialog - which contains standup questions
     2. Skip today - to let user pass the meeting
-
     Returns
     -------
     flask.Response
         Empty response 200 signifies success.
-
     """
     msg = json.dumps(slack_request).encode('utf-8')
         
     action = slack_request["actions"][0]
+
+    if action["action_id"] == "answer_action":
+        producer.send('record_channel', key=bytes(msg), value=bytes(msg))
+
     if action.get('selected_options', None):
         if '_permanent' in action['selected_options'][0]['value']:
             value = action['selected_options'][0]['value']
@@ -87,4 +86,3 @@ def process_dialogs(slack_request: dict):
     logger.info("Sent Kafka topic message")
     result = {}
     return make_response(jsonify(result), status.HTTP_204_NO_CONTENT)
-
