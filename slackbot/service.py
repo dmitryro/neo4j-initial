@@ -74,12 +74,10 @@ async def processs_submissions(submissions) -> None:
 @app.agent(dismissal_topic)
 async def processs_dismissals(dismissals) -> None:
     async for dismissal in dismissals:
-        logger.info(f"ANOTHER DISMISSAL {dismissal}") 
         user = dismissal['user']
         channel_id = dismissal['channel']['id']
         message_ts = dismissal['container']['message_ts']
         answer = dismissal['actions'][0]['selected_option']['value'].split('dismiss_')[1]
-        logger.info("NOT SURE WHEY WE ARE GOING THERE 1")
         answer_next(answer, user, channel_id, None, action='dismiss')
 
 
@@ -90,7 +88,6 @@ async def processs_approvals(approvals) -> None:
         channel_id = approval['channel']['id']
         message_ts = approval['container']['message_ts']
         answer = approval['actions'][0]['selected_option']['value'].split('approve_')[1]
-        logger.info("NOT SURE WHEY WE ARE GOING THERE 2")
         answer_next(answer, user, channel_id, None, action='approve')
 
 
@@ -102,7 +99,6 @@ async def processs_editings(editings) -> None:
         channel_id = editing['channel']['id']
         message_ts = editing['container']['message_ts']
         answer = editing['actions'][0]['selected_option']['value'].split('edit_')[1]
-        logger.info("NOT SURE WHEY WE ARE GOING THERE 3")
         answer_next(answer, user, channel_id, trigger_id, action='edit')
 
 
