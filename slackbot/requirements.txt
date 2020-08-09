@@ -1,13 +1,9 @@
 aredis
-eventlet
 faust
-faust[eventlet]
 python-schema-registry-client[faust]
 aiotools
-aiohttp
 coloredlogs
 nltk
-observable
 redis
 slackclient
 slack_blockkit
@@ -16,7 +12,7 @@ psycopg2-binary
 SQLAlchemy
 sqlalchemy-migrate
 requests>=2.4.0
-wsproto
+shortuuid
 six>=1.10.0
 pytest>=2.9.1
 redis
