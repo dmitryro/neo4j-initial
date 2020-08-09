@@ -20,6 +20,20 @@ def delete_all_nodes(tx):
     tx.run("MATCH (n) DETACH DELETE n")
 
 
+def search_answers(tx, question):
+    """ Search for an answer """
+    #result = tx.run("MATCH (q:Question) WHERE q.label = $label return q.answer AS answer", label=label)
+    with driver.session() as session:
+        results = session.run(Query("MATCH (q: Question) WHERE apoc.text.levenshteinDistance($question, q.question) < 3.0 return q.answer AS answer", timeout=3.0), question=question)
+        try:
+            answers = [answer['answer'] for answer in list(results)]
+            return list(set(answers))
+        except Exception as e:
+            print(f"Error reading {e}") 
+            return []
+    return []
+
+
 def search_answer(tx, question):
     """ Search for an answer """
     label = encode(question)
@@ -62,6 +76,25 @@ def delete_all():
 
     except Exception as e:
         pass
+
+def find_answers(question):
+    """ Find an answer """
+    try:
+        answers = []
+        driver = GraphDatabase.driver(uri, auth=basic_auth(USER, PASS), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+
+        with driver.session() as session:
+            answers = session.read_transaction(search_answers, question)
+            session.close()
+        driver.close()
+        return answers
+
+    except Exception as e:
+        answers = []
+        print(f"Failed connecting to bolt - {e}")
+
+    return answers
+
 
 def find_answer(question):
     """ Find an answer """
@@ -113,7 +146,9 @@ def extend_at_position(answer, index, addition):
 
 
 def edit_existing_question(tx, question, answer):
+    logger.info(f"NOW NOW NOW NOW NOW! LET US MATCH IT!!!!!!!!!!!!!!!!!!!!!!!  Q:{question} A:{answer}")
     result = tx.run("MATCH (q:Question{question:$question}) SET q.answer = $answer", question=question, answer=answer)
+    logger.info(f"AND THE RESULT!!!!!!!!!!!!!!!!!!!!!{result}")
     return result
 
 

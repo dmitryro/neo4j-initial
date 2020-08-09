@@ -46,7 +46,7 @@ def process_block_actions(slack_request: dict):
         
     action = slack_request["actions"][0]
 
-    if action["action_id"] == "answer_action":
+    if "answer_action" in action["action_id"]:
         producer.send('record_channel', key=bytes(msg), value=bytes(msg))
 
     if action.get('selected_options', None):
@@ -83,6 +83,6 @@ def process_block_actions(slack_request: dict):
 def process_dialogs(slack_request: dict):
     msg = json.dumps(slack_request).encode('utf-8')
     producer.send('submit_edited', key=bytes(msg), value=bytes(msg))   
-    logger.info("Sent Kafka topic message")
+    logger.info(f"API DIAGNOSTIC - Sent Kafka topic message {msg}")
     result = {}
     return make_response(jsonify(result), status.HTTP_204_NO_CONTENT)

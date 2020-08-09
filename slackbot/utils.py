@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import shortuuid
 import base64
 from contextlib import contextmanager
 import json
@@ -28,6 +29,26 @@ redis['port'] = read_env('REDIS_PORT')
 r = RegularStrictRedis(**redis)
 ar = AsyncStrictRedis(**redis)
 
+def get_uuid():
+    shortuuid.set_alphabet("abcdefghijklmnopqrstuvwxyz0123456789")
+    return shortuuid.uuid()
+
+def encode(message):
+    if not message:
+        return ""
+    message_bytes = message.encode('utf-8')
+    base64_bytes = base64.a85encode(message_bytes)
+    base64_message = base64_bytes.decode('utf-8')
+    return str(base64_message)
+
+
+def decode(base64_message):
+    base64_bytes = base64_message.encode('utf-8')
+    message_bytes = base64.a85decode(base64_bytes)
+    message = message_bytes.decode('utf-8')
+    return str(message)
+
+
 def obtain_session():
     """ Get SQLAlchemy session """
     engine = create_engine(os.environ['DATABASE_URL'])
@@ -37,10 +58,10 @@ def obtain_session():
     return session()
 
 
-def read_modal(answer):
+def read_modal(answer, index):
     modal={
         "type": "modal",
-        "callback_id": "modal-id",
+        "callback_id": f"modal-id-{index}",
         "title": {
             "type": "plain_text",
             "text": "Edit Answer"
@@ -56,13 +77,13 @@ def read_modal(answer):
         "blocks": [
             {
             "type": "input",
-            "block_id": "b-id",
+            "block_id": f"b-id-{index}",
             "label": {
                 "type": "plain_text",
                 "text": "Edit Answer",
             },
             "element": {
-                "action_id": "a-id",
+                "action_id": f"a-id-{index}",
                 "type": "plain_text_input",
                 "action_id": "ml_input",
                 "multiline": True,
@@ -96,8 +117,51 @@ def read_modal(answer):
         }
     return modal
 
-def read_blocks(text=None, question=None, answer=default_answer):
 
+def read_answer_block(ans, index):
+    answer = decode(list(ans.keys())[0])
+    uuid = list(ans.values())[0]
+    approve_key = f"approve_{uuid}"
+    dismiss_key = f"dismiss_{uuid}"
+    edit_key = f"edit_{uuid}"
+
+    block = {"type":"section",
+             "text": {
+                       "type": "mrkdwn",
+                       "text":  str(answer) 
+              },
+              "accessory": {
+                  "type": "overflow",
+                  "action_id": f"answer_action",
+                  "options":[
+                      {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Approve",
+                        },
+                        "value": approve_key
+                      },
+                      { 
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Dismiss",
+                        },
+                        "value": dismiss_key
+                      },
+                      {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "edit",
+                        },
+                        "value": edit_key
+                      }
+                  ] # Options end
+              } # Accessory end
+            }
+    return block
+
+
+def read_blocks(text=None, question=None, answers=[{encode(default_answer):get_uuid()}]):
     if question:
         blocks = [{"type": "section",
                    "block_id": "section 890",
@@ -118,54 +182,20 @@ def read_blocks(text=None, question=None, answer=default_answer):
                          "type": "divider",
                          "block_id": "divider1"
                    },
- 
+
                   {"type": "section",
                    "block_id": "section 892",
                    "text": {
                        "type": "mrkdwn",
                        "text": "The proposed answers:"
                     }
-                   },
+                   }
+        ]
 
-
-                   {
-                       "type": "section",
-                       "text": {
-                            "type": "mrkdwn",
-                            "text": answer
-                        },
-                       "accessory": {
-                            "type": "overflow",
-                            "action_id": "answer_action",
-                            "options":[
-                                         {
-                                            "text": {
-                                                  "type": "plain_text",
-                                                  "text": "Approve",
-                                            },
-                                            "value": f"approve_{encode(answer)}"
-                                         },
-                                         {
-                                            "text": {
-                                                  "type": "plain_text",
-                                                  "text": "Dismiss"
-                                            },
-                                            "value": f"dismiss_{encode(answer)}"
-                                         },
-                                         {
-                                            "text": {
-                                                  "type": "plain_text",
-                                                  "text": f"Edit"
-                                            },
-                                            "value": f"edit_{encode(answer)}"
-                                         }
-                               ] # Options end
-                          } # Accessory end
-                    } # Section end
-
-      ]
-
-
+        for i, answer in enumerate(answers):
+            b = read_answer_block(answer, i)
+            blocks.append(b)
+        return blocks
     else:
         blocks = [{"type": "section",
                    "block_id": "section 890",
@@ -173,29 +203,6 @@ def read_blocks(text=None, question=None, answer=default_answer):
                        "type": "mrkdwn",
                        "text": text
                     },
-                  },
-                  {"type": "actions",
-                   "block_id": "actions1",
-                   "elements": [
-                                    {
-                                        "type": "button",
-                                        "text": {
-                                             "type": "plain_text",
-                                             "text": "Approve"
-                                        },
-                                        "value": "approve",
-                                        "action_id": "button_1"
-                                    },
-                                    {
-                                        "type": "button",
-                                        "text": {
-                                             "type": "plain_text",
-                                             "text": "Dismiss"
-                                        },
-                                        "value": "dismiss",
-                                        "action_id": "button_2"
-                                    }
-                       ]
                   }
                  ]
      
@@ -213,7 +220,8 @@ def delete_ephemeral(channel_id, message_ts):
         logger.error(f"Failed deleting ephemeral message from channel {channel_id} with timestamp {message_ts}")
         
 
-def respond_next(answer, question, user, channel_id, trigger_id, action='approve'):
+def respond_next(answer:str, question:str, user:dict, channel_id:str, trigger_id:str, index:int, action='approve'):
+    logger.info(f"OUR BEST TRY ANSWER {answer} QUESTION {question} CHANNEL {channel_id} TRIGGER {trigger_id} ACTION {action}") 
     token=read_env("SLACK_TOKEN")
     if action == 'approve':
         try:
@@ -254,32 +262,34 @@ def respond_next(answer, question, user, channel_id, trigger_id, action='approve
         
     elif action == 'edit':
         try:
-            view = read_modal(answer)
-            logger.info(f"WATCH ! OUR VIEW {view}") 
+            view = read_modal(answer, index)
             user_id = user['id']
             username = user['username']
 
             api_response = client.views_open(
+              token=token,
               trigger_id=trigger_id,
-              view=view,
+              view=view
             )            
         except SlackApiError as e: 
             # You will get a SlackApiError if "ok" is False 
             assert e.response["ok"] is False
             assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found' 
-            logger.error(f"Got an error in respond edit : {e.response['error']}")      
+            logger.error(f"Got an error in respond edit : {e} - {e.response['error']} - {e.response['response_metadata']}")      
 
     else:
         pass
 
-def respond(payload, text=None, question=None, answer=default_answer,  ephemeral=False):
+def respond(payload, text=None, question=None, answers=[{encode(default_answer):get_uuid()}], ephemeral=False):
     data = payload['data']
     web_client = payload['web_client']
     rtm_client = payload['rtm_client']
     channel_id = data['channel']
     thread_ts = data['ts']
     user = data['user']
-
+    logger.info(f"LAL LAL LAL before {answers}")
+    blocks=read_blocks(text=text, answers=answers, question=question)
+    logger.info(f"LOL LOL LOL after  {answers} - {blocks}")
     try:
         if (ephemeral):
             response = web_client.chat_postEphemeral(
@@ -289,7 +299,7 @@ def respond(payload, text=None, question=None, answer=default_answer,  ephemeral
                 icon_emoji=":chart_with_upwards_trend:",
                 #text=text,
                 username='kbpro',
-                blocks=read_blocks(text=text, answer=answer, question=question),
+                blocks=blocks,
                 thread_ts=None #thread_ts
             )
         else:  
@@ -313,22 +323,6 @@ def save_pending(pending):
     s = obtain_session()
     s.add(pending)
     s.commit()
-
-
-def encode(message):
-    if not message:
-        return ""
-    message_bytes = message.encode('utf-8')
-    base64_bytes = base64.b64encode(message_bytes)
-    base64_message = base64_bytes.decode('utf-8')
-    return base64_message
-
-
-def decode(base64_message):
-    base64_bytes = base64_message.encode('utf-8')
-    message_bytes = base64.b64decode(base64_bytes)
-    message = message_bytes.decode('utf-8')
-    return message
 
 
 async def read_approved():
@@ -361,19 +355,39 @@ def edit_answer(question, answer):
 def read_question(msg):
     if not msg:
         return 'Empty question sent, sorry'
+    logger.info(f"WE WILL BE SEARCHING FOR QUESTION TO THE ANSWER {msg}")
     answer = {"answer": msg}
     r.lpush('searched_questions', json.dumps(answer).encode('utf-8'))
-    logger.info("Looking for question")
-    sleep(4)
+    sleep(2.5)
+    logger.info("Looking for question in daemon -->")
 
     key = encode(msg)    
-    question_key = '{key}-question'
+    question_key = f'{key}-question'
+    logger.info(f"---> AND NOW! WE ARE TRYING TO CHECK THE KEY!!!! {question_key}")
     question = r.get(question_key)
+    logger.info(f"--> AND NOW! THE QUESTION WAS {question} under the key {question_key}")
     if not question:
         return None
     else:
         return question.decode('utf-8')
 
+
+def read_answers(msg):
+    if not msg:
+        return [default_answer]
+    elif msg == default_answer:
+        return [default_answer]    
+    answers = []
+    r.lpush('multi-answer-questions', msg)
+    sleep(2.5)
+    key = encode(msg)
+    answer_key = f'{key}-answers'
+
+    while(r.llen(f'{key}-answers')!=0):
+        item = r.lpop(f'{key}-answers')
+        answers.append(item.decode('utf-8'))
+    logger.info(f"HI THERE BODY !!!! HERE ARE OUR ANSWERS {answers}")
+    return answers
 
 
 def read_answer(msg):
@@ -384,7 +398,6 @@ def read_answer(msg):
 
     r.lpush('questions', msg)
     logger.info("Processing answer")
-    sleep(4)
     key = encode(msg)
     answer_key = f'{key}-answer'
     answer = r.get(answer_key)

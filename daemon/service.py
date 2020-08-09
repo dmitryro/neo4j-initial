@@ -6,7 +6,7 @@ from aredis import StrictRedis
 import asyncio
 from datetime import datetime
 import faust
-from graph import find_answer, find_question, add_question, edit_question
+from graph import find_answer, find_answers, find_question, add_question, edit_question
 import json
 import logging
 from redis import StrictRedis as RegularStrictRedis
@@ -58,6 +58,7 @@ async def str_consumer(stream):
 async def store_question(stream):
     async for message in stream:
         key = encode(message)
+        logger.info(f"--> We are storing question {message} -- under the key {key}-question")
         await ar.set(f'{key}-question', message)
 
         if key not in questions_table.keys():
@@ -97,10 +98,14 @@ async def produce_searched_questions():
     while(await ar.llen('searched_questions')!=0):
         item = await ar.lpop('searched_questions')
         d = json.loads(item)
-        logger.info(f"Finding question for an answer {d['answer']}")
+        logger.info(f"--> Finding question for an answer {d['answer']}")
         answer = d['answer']
         q = find_question(answer)
-        await store_question.send(value=q)
+        key = encode(answer)
+        await ar.set(f"{key}-question", q)
+        logger.info(f"--> We stored question {q} under the key {key}-question")
+        #logger.info(f"--> We found question and it is {q}")
+        #await store_question.send(value=q)
 
 
 async def produce_answered():
@@ -113,7 +118,18 @@ async def produce_answered():
         add_question(**d)
         await store_question.send(value=q)
 
+async def produce_multi_ans_questions():
+    logger.info(f"We are about to produce questions requiring multiple  answers")
+    while(await ar.llen('multi-answer-questions')!=0):
+        item = await ar.lpop('multi-answer-questions')
+        question = str(item.decode('utf-8'))  
+        answers = find_answers(question)
+        key = encode(question)
 
+        for answer in answers:
+             await ar.lpush(f'{key}-answers', answer)
+    
+  
 async def produce_edited():
     logger.info(f"We are about to produce edited answers")
 
@@ -164,15 +180,14 @@ async def produce_questions():
 
         logger.info(f"Answer so far ... {answer}")
 
-
-@app.timer(2.5)
+@app.timer(1.5)
 async def producer():
     await produce_questions()
     await produce_answered()
     await produce_edited()
     await produce_extended()
     await produce_searched_questions()
-
+    await produce_multi_ans_questions()
 
 def run_producer(msg):
     r.lpush('questions', msg)

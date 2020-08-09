@@ -11,7 +11,7 @@ from slack import RTMClient
 from slack.errors import SlackApiError
 from lex import QuestionDetector
 from actions import edit, store, answer, preview_answer, misc_message
-from utils import read_env, read_approved
+from utils import read_env, encode, decode, read_approved
 from decorators import daemonize, async_timeout, on_approved, run_async
 from singleton import SingletonMeta
 import time
@@ -64,22 +64,24 @@ class Bot(metaclass=SingletonMeta):
         if 'text' in data:
             sentence = data['text']#.split(None, 1)[1]
 
-            if detect.IsQuestion(sentence):
-                logger.info(f"===> CASE 1 - sending answer- - {sentence}")
-                preview_answer(payload)            
- 
-            if 'store' == data['text'].split(None, 1)[0]:
-                logger.info(f"===> CASE 2 - sending store - {sentence}")
-                store(payload)
+            logger.info(f"OUR LOVELY SENTENCE !!!!! {sentence}")
 
+            if 'store' == data['text'].split(None, 1)[0]:
+                logger.info(f"===> CASE 1 - sending store - {sentence}")
+                store(payload)
+            
             elif 'answer' == data['text'].split(None, 1)[0]: 
-                logger.info(f"===> CASE 3 - sending answer - {sentence}")
+                logger.info(f"===> CASE 2 - sending answer - {sentence}")
                 preview_answer(payload)
 
             elif 'edit' == data['text'].split(None, 1)[0]:
-                logger.info(f"===> CASE 4 - sending edit - {sentence}")
+                logger.info(f"===> CASE 3 - sending edit - {sentence}")
                 edit(payload)
-
+            else:
+                logger.info(f"CASE 4.1 ==== {sentence} before the check")
+                if detect.IsQuestion(sentence):
+                    logger.info(f"===> CASE 4 - sending answer- - {sentence}")
+                    preview_answer(payload)
             #else:
             #    logger.info(f"===> CASE 5 - Miscelaneous - sending - {sentence}")
             #    misc_message(payload)
