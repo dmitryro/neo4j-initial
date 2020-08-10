@@ -151,7 +151,7 @@ def read_answer_block(ans, index):
                       {
                         "text": {
                             "type": "plain_text",
-                            "text": "edit",
+                            "text": "Edit",
                         },
                         "value": edit_key
                       }
