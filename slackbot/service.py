@@ -16,6 +16,7 @@ approval_topic = app.topic("approve")
 record_channel_topic = app.topic("record_channel")
 editing_topic = app.topic("edit")
 dismissal_topic = app.topic("dismiss")
+delete_topic = app.topic("delete")
 make_permanent_topic = app.topic("make_permanent")
 make_nonpermanent_topic = app.topic("make_nonpermanent")
 submit_edited_topic = app.topic("submit_edited")
@@ -38,27 +39,32 @@ class FaustService(faust.Service):
     async def on_stop(self) -> None:
         self.log.info('STOPPED')
 
+
 @app.agent(submit_edited_topic)
 async def processs_submissions(submissions) -> None:
     index = 0
     async for payload in submissions:
         submit_edited(payload, index)
         index = index + 1
+
  
 @app.agent(record_channel_topic)
 async def process_record_channel(channels) -> None:
     async for payload in channels:
         record_channel(payload)
 
+
 @app.agent(make_nonpermanent_topic)
 async def processs_nonpermanent(checkboxes) -> None:
     async for payload in checkboxes:
         make_nonpermanent(payload)
 
+
 @app.agent(make_permanent_topic)
 async def processs_permanent(checkboxes) -> None:
     async for payload in checkboxes:
         make_permanent(payload)
+
 
 @app.agent(submit_edited_topic)
 async def processs_submissions(submissions) -> None:
@@ -67,12 +73,13 @@ async def processs_submissions(submissions) -> None:
         submit_edited(payload, index)
         index = index + 1 
 
+
 @app.agent(dismissal_topic)
 async def processs_dismissals(dismissals) -> None:
     index = 0
     async for dismissal in dismissals:
         user = dismissal['user']
-        trigger_id = editing.get('trigger_id', None)
+        trigger_id = dismissal.get('trigger_id', None)
         channel_id = dismissal['channel']['id']
         message_ts = dismissal['container']['message_ts']
         answer = dismissal['actions'][0]['selected_option']['value'].split('dismiss_')[1]
@@ -103,6 +110,17 @@ async def processs_editings(editings) -> None:
         answer_next_with_uuid(answer, user, channel_id, trigger_id, index, action='edit')
         index = index + 1 
 
+@app.agent(delete_topic)
+async def processs_deleted(deleted) -> None:
+    index = 0
+    async for delete in deleted:
+        user = delete['user']
+        trigger_id = delete.get('trigger_id', None)
+        channel_id = delete['channel']['id']
+        message_ts = delete['container']['message_ts']
+        answer = delete['actions'][0]['selected_option']['value'].split('delete_')[1]
+        answer_next_with_uuid(answer, user, channel_id, trigger_id, index, action='delete')
+        index = index + 1
 
 def run_producer(msg):
     pass

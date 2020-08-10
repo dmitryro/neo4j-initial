@@ -45,6 +45,7 @@ def submit_edited(payload:dict, index:int):
     action_id = payload["view"]["blocks"][1]["accessory"]["action_id"]
     token = payload["token"]
     user = payload["user"]
+    message_ts = ""
     user_id = payload["user"]["id"]
     team_id = payload["user"]["team_id"]
     app_id = payload["api_app_id"]
@@ -52,7 +53,7 @@ def submit_edited(payload:dict, index:int):
     channel_id = channel.channel_id
     Channel.delete_by_app(app_id, token, team_id, user_id)
     original_answer = payload["view"]["blocks"][0]["element"]["initial_value"]
-    answer = payload["view"]["state"]["values"][f"b-id-{index}"]["ml_input"]["value"]
+    answer = payload["view"]["state"]["values"]["b-id"]["ml_input"]["value"]
     question = fetch_question(original_answer)
 
     try:
@@ -64,7 +65,7 @@ def submit_edited(payload:dict, index:int):
     except Exception as e:
         logger.error("Failed processing permanent {e}")
     logger.info(f"!!! ====> WE EDITED ANSWER {answer} for index {index}")
-    answer_next(answer, user, channel_id, None, index, action='approve')
+    answer_next(answer, user, channel_id, None, message_ts, index, action='approve')
 
 
 def record_channel(payload:dict):
@@ -89,6 +90,7 @@ def answer(payload):
     #answer = read_answer(thing)
     real_answers = read_answers(thing)
     user = payload['data']['user']
+    message_ts = payload['data']['ts']
 
     if not real_answers:
         p = Pending(username=f"{user}", real_name=f"{user}", question=thing)
@@ -117,9 +119,15 @@ def answer(payload):
         encmapping = EncodedMapping.find_by_answer(encode(answer))
         if not encmapping:
             uuid = get_uuid()
-            encmapping = EncodedMapping(answer=encode(answer), uuid=uuid)
+            encmapping = EncodedMapping(answer=encode(answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
-        answers.append({answer:encmapping.uuid})
+        answers.append({encode(answer):encmapping.uuid})
+    if len(real_answers) == 0:
+            uuid = get_uuid()
+            encmapping = EncodedMapping(answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
+            encmapping.save()
+            answers.append({encode(default_answer):encmapping.uuid})           
+
     respond(payload, text=None, question=thing, answers=answers,  ephemeral=ephemeral)
  
 
@@ -175,9 +183,16 @@ def preview_answer(payload):
         encmapping = EncodedMapping.find_by_answer(encode(answer))
         if not encmapping:
             uuid = get_uuid()
-            encmapping = EncodedMapping(answer=encode(answer), uuid=uuid)
+            encmapping = EncodedMapping(answer=encode(answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
         answers.append({encode(answer):encmapping.uuid})
+
+    if len(real_answers) == 0:
+            uuid = get_uuid()
+            encmapping = EncodedMapping(answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
+            encmapping.save()
+            answers.append({encode(default_answer):encmapping.uuid})
+
     respond(payload, text=preview_answer, question=thing, answers=answers, ephemeral=True)
 
 
@@ -201,12 +216,13 @@ def make_permanent(payload:dict):
 def answer_next_with_uuid(uuid:str, user:dict, channel_id:str, trigger_id:str, index:int, action='approve'):
     mapping = EncodedMapping.find_by_uuid(uuid)
     real_answer = decode(mapping.answer)
-    answer_next(real_answer, user, channel_id, trigger_id, index, action=action)
+    message_ts = mapping.message_ts
+    answer_next(real_answer, user, channel_id, trigger_id, message_ts, index, action=action)
     
 
-def answer_next(answer:str, user:dict, channel_id:str, trigger_id:str, index:int, action='approve'):
+def answer_next(answer:str, user:dict, channel_id:str, trigger_id:str, message_ts:str, index:int, action='approve'):
     question = fetch_question(answer)
-    respond_next(answer, question, user, channel_id, trigger_id, index, action=action)
+    respond_next(answer, question, user, channel_id, trigger_id, message_ts, index, action=action)
 
 
 def store(payload):

@@ -77,7 +77,7 @@ def read_modal(answer, index):
         "blocks": [
             {
             "type": "input",
-            "block_id": f"b-id-{index}",
+            "block_id": f"b-id",
             "label": {
                 "type": "plain_text",
                 "text": "Edit Answer",
@@ -124,6 +124,7 @@ def read_answer_block(ans, index):
     approve_key = f"approve_{uuid}"
     dismiss_key = f"dismiss_{uuid}"
     edit_key = f"edit_{uuid}"
+    delete_key = f"delete_{uuid}"
 
     block = {"type":"section",
              "text": {
@@ -154,6 +155,13 @@ def read_answer_block(ans, index):
                             "text": "Edit",
                         },
                         "value": edit_key
+                      },
+                      {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Delete",
+                        },
+                        "value": delete_key
                       }
                   ] # Options end
               } # Accessory end
@@ -220,8 +228,7 @@ def delete_ephemeral(channel_id, message_ts):
         logger.error(f"Failed deleting ephemeral message from channel {channel_id} with timestamp {message_ts}")
         
 
-def respond_next(answer:str, question:str, user:dict, channel_id:str, trigger_id:str, index:int, action='approve'):
-    logger.info(f"OUR BEST TRY ANSWER {answer} QUESTION {question} CHANNEL {channel_id} TRIGGER {trigger_id} ACTION {action}") 
+def respond_next(answer:str, question:str, user:dict, channel_id:str, trigger_id:str, message_ts:str, index:int, action='approve'):
     token=read_env("SLACK_TOKEN")
     if action == 'approve':
         try:
@@ -248,11 +255,11 @@ def respond_next(answer:str, question:str, user:dict, channel_id:str, trigger_id
             response = client.chat_postEphemeral(
                 channel=channel_id,
                 user=user_id,
-                as_user=False,
+                as_user=True,
                 icon_emoji=":chart_with_upwards_trend:",
                 text=f'Hi admin, you dismissed: {answer}',
                 username='kbpro',
-                thread_ts=None #thread_ts 
+                thread_ts=None
             ) 
         except SlackApiError as e:
             # You will get a SlackApiError if "ok" is False
@@ -277,8 +284,23 @@ def respond_next(answer:str, question:str, user:dict, channel_id:str, trigger_id
             assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found' 
             logger.error(f"Got an error in respond edit : {e} - {e.response['error']} - {e.response['response_metadata']}")      
 
-    else:
-        pass
+    elif action == 'delete':
+        blocks = [{"type": "section", "text": {"type": "plain_text", "text": "Hello world"}}]
+        try:
+            response = client.chat_update(
+                token=token,
+                channel=channel_id,
+                blocks=blocks,
+                ts=message_ts,
+                as_user=True
+            ) 
+        except SlackApiError as e:
+            # You will get a SlackApiError if "ok" is False
+            assert e.response["ok"] is False
+            assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
+            logger.error(f"Got an error in delete {message_ts}: {e.response}")
+        
+
 
 def respond(payload, text=None, question=None, answers=[{encode(default_answer):get_uuid()}], ephemeral=False):
     data = payload['data']

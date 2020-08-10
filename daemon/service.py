@@ -177,7 +177,7 @@ async def produce_questions():
 
         logger.info(f"Answer so far ... {answer}")
 
-@app.timer(1.5)
+@app.timer(2.5)
 async def producer():
     await produce_questions()
     await produce_answered()
