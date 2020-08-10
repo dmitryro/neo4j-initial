@@ -51,20 +51,19 @@ def submit_edited(payload:dict, index:int):
     channel = Channel.find_by_app(app_id, token, team_id, user_id)
     channel_id = channel.channel_id
     Channel.delete_by_app(app_id, token, team_id, user_id)
-    logger.info(f"WE ARE DONE EDITING {channel_id}")
     original_answer = payload["view"]["blocks"][0]["element"]["initial_value"]
-    answer = payload["view"]["state"]["values"]["b-id"]["ml_input"]["value"]
+    answer = payload["view"]["state"]["values"][f"b-id-{index}"]["ml_input"]["value"]
     question = fetch_question(original_answer)
 
     try:
         p = Permanent.find_by_action(action_id, token)
         if p:
-            logger.info("WE ARE MAKING IT PERMANENT")
             create_mapping(question, original_answer, answer)
             update_store(question, answer, operation='edit')
             logger.info(f"We are updating or original answer \"{original_answer}\" with \"{answer}\"")
     except Exception as e:
         logger.error("Failed processing permanent {e}")
+    logger.info(f"!!! ====> WE EDITED ANSWER {answer} for index {index}")
     answer_next(answer, user, channel_id, None, index, action='approve')
 
 
@@ -90,7 +89,6 @@ def answer(payload):
     #answer = read_answer(thing)
     real_answers = read_answers(thing)
     user = payload['data']['user']
-    logger.info(f"====================HI THERE SEE !!!!! OUR ANSWERS {answers}")
 
     if not real_answers:
         p = Pending(username=f"{user}", real_name=f"{user}", question=thing)
@@ -129,15 +127,12 @@ def answer(payload):
 def preview_answer(payload):
     """ Answer a slack request """
     thing = payload['data']['text']#.split(None, 1)[1]
-    logger.info(f"STEP 1 ------------ TEXT  {thing}")
     real_answers = read_answers(thing)
     user = payload['data']['user']
     message_ts = payload['data']['ts']
     question_compressed = encode(thing)
-    logger.info(f"STEP 2 ------------ QUESTIN COMPRESSED  {question_compressed}")
     channel_id = payload['data']['channel']
 
-    logger.info(f"STEP 3 ------- REAL ANSWERS {real_answers}")
 
     if len(real_answers) == 0:
         p = Pending(username=f"{user}", real_name=f"{user}", question=thing)
@@ -149,16 +144,13 @@ def preview_answer(payload):
         answers =  [ans]
         ephemeral=True
     else:
-        logger.info(f"STEP 4 ------- WE GOT SOME ANSWERS {real_answers}")
         ephemeral=False
         mapping = Mapping.find_by_question(thing)
         if mapping:
-            logger.info(f"STEP 5 ------- WE GOT SOME ANSWERS {real_answers}")
             mapping.compressed_answer = encode(real_answers[0])
             mapping.update()
 
         else:
-            logger.info(f"STEP 6 ------- WE GOT SOME ANSWERS {real_answers}")
             mapping = Mapping(answer_compressed=str(encode(real_answers[0])),
                               question_compressed=str(encode(thing)), version=0.01)
             mapping.save()
@@ -170,7 +162,6 @@ def preview_answer(payload):
 
     if len(real_answers):
         answer_compressed = encode(real_answers[0])
-        logger.info(f"STEP 7 ------- COMPRESSED ANSWERS {answer_compressed}")
         deletable = Deletable(question_compressed=question_compressed, 
                               answer_compressed=answer_compressed,
                               channel_id=channel_id,
@@ -187,8 +178,6 @@ def preview_answer(payload):
             encmapping = EncodedMapping(answer=encode(answer), uuid=uuid)
             encmapping.save()
         answers.append({encode(answer):encmapping.uuid})
-    logger.info(f"STEP 8 PAYLOAD {payload}")
-    logger.info(f"STEP 9 QUESTION {thing}")
     respond(payload, text=preview_answer, question=thing, answers=answers, ephemeral=True)
 
 
@@ -197,7 +186,6 @@ def make_nonpermanent(payload:dict):
         action_id=payload["actions"][0]["action_id"]
         token=payload["token"]
         Permanent.delete_by_action(token=token, action_id=action_id)
-        logger.info(f"WE ARE MAKING IT NONPERMANENT ")
     except Exception as e:
         logger.error(f"We failed deleting non-permanent item {e}")
 
@@ -213,13 +201,11 @@ def make_permanent(payload:dict):
 def answer_next_with_uuid(uuid:str, user:dict, channel_id:str, trigger_id:str, index:int, action='approve'):
     mapping = EncodedMapping.find_by_uuid(uuid)
     real_answer = decode(mapping.answer)
-    answer_next(real_answer, user, channel_id, trigger_id, index, action)
+    answer_next(real_answer, user, channel_id, trigger_id, index, action=action)
     
 
 def answer_next(answer:str, user:dict, channel_id:str, trigger_id:str, index:int, action='approve'):
-    logger.info(f"STEP 1.1 {answer} - {trigger_id} - {action}")
     question = fetch_question(answer)
-    logger.info(f"STEP 1.2 {question}")
     respond_next(answer, question, user, channel_id, trigger_id, index, action=action)
 
 

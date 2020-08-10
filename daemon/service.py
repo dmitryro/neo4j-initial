@@ -125,10 +125,10 @@ async def produce_multi_ans_questions():
         question = str(item.decode('utf-8'))  
         answers = find_answers(question)
         key = encode(question)
-
+       
         for answer in answers:
              await ar.lpush(f'{key}-answers', answer)
-    
+        l = len(answers)
   
 async def produce_edited():
     logger.info(f"We are about to produce edited answers")
@@ -138,8 +138,6 @@ async def produce_edited():
         d = json.loads(item)
         q = d['question']
         edit_question(**d)
-        logger.info(f"EDITING ANSWER - SETTING the answer to question {d['question']} to be {d['answer']}")
-        logger.info(f"Updated question {d['question']}:{d['answer']}")
         await store_question.send(value=q)
 
 
@@ -149,7 +147,6 @@ async def produce_extended():
     while(await ar.llen('edited')!=0):
         item = await ar.lpop('extended')
         d = json.loads(item)
-        logger.info(f"EXTENDING ANSWER {d['answer']} to question {d['question']} with {d['extension']}")
 
 
 async def produce_questions():

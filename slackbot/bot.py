@@ -64,8 +64,6 @@ class Bot(metaclass=SingletonMeta):
         if 'text' in data:
             sentence = data['text']#.split(None, 1)[1]
 
-            logger.info(f"OUR LOVELY SENTENCE !!!!! {sentence}")
-
             if 'store' == data['text'].split(None, 1)[0]:
                 logger.info(f"===> CASE 1 - sending store - {sentence}")
                 store(payload)

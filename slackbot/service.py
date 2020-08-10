@@ -42,9 +42,9 @@ class FaustService(faust.Service):
 async def processs_submissions(submissions) -> None:
     index = 0
     async for payload in submissions:
-        index = index + 1
         submit_edited(payload, index)
-    
+        index = index + 1
+ 
 @app.agent(record_channel_topic)
 async def process_record_channel(channels) -> None:
     async for payload in channels:
@@ -62,45 +62,46 @@ async def processs_permanent(checkboxes) -> None:
 
 @app.agent(submit_edited_topic)
 async def processs_submissions(submissions) -> None:
+    index = 0
     async for payload in submissions:
-        submit_edited(payload)
+        submit_edited(payload, index)
+        index = index + 1 
 
 @app.agent(dismissal_topic)
 async def processs_dismissals(dismissals) -> None:
     index = 0
     async for dismissal in dismissals:
-        index = index + 1
         user = dismissal['user']
         trigger_id = editing.get('trigger_id', None)
         channel_id = dismissal['channel']['id']
         message_ts = dismissal['container']['message_ts']
         answer = dismissal['actions'][0]['selected_option']['value'].split('dismiss_')[1]
         answer_next_with_uuid(answer, user, channel_id, trigger_id, index, action='dismiss')
-
+        index = index + 1 
+      
 @app.agent(approval_topic)
 async def processs_approvals(approvals) -> None:
     index = 0
     async for approval in approvals:  # type: str
-        index = index + 1
         user = approval['user']
         channel_id = approval['channel']['id']
         message_ts = approval['container']['message_ts']
         answer = approval['actions'][0]['selected_option']['value'].split('approve_')[1]
         answer_next_with_uuid(answer, user, channel_id, None, index, action='approve')
-        sleep(5)
+        index = index + 1 
+        sleep(3.5)
 
 @app.agent(editing_topic) 
 async def processs_editings(editings) -> None:
     index = 0
     async for editing in editings:  # type: str
-        index = index + 1
         user = editing['user']
         trigger_id = editing.get('trigger_id', None)
         channel_id = editing['channel']['id']
         message_ts = editing['container']['message_ts']
         answer = editing['actions'][0]['selected_option']['value'].split('edit_')[1]
         answer_next_with_uuid(answer, user, channel_id, trigger_id, index, action='edit')
-
+        index = index + 1 
 
 
 def run_producer(msg):

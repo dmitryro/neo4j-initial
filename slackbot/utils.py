@@ -355,7 +355,6 @@ def edit_answer(question, answer):
 def read_question(msg):
     if not msg:
         return 'Empty question sent, sorry'
-    logger.info(f"WE WILL BE SEARCHING FOR QUESTION TO THE ANSWER {msg}")
     answer = {"answer": msg}
     r.lpush('searched_questions', json.dumps(answer).encode('utf-8'))
     sleep(2.5)
@@ -363,9 +362,7 @@ def read_question(msg):
 
     key = encode(msg)    
     question_key = f'{key}-question'
-    logger.info(f"---> AND NOW! WE ARE TRYING TO CHECK THE KEY!!!! {question_key}")
     question = r.get(question_key)
-    logger.info(f"--> AND NOW! THE QUESTION WAS {question} under the key {question_key}")
     if not question:
         return None
     else:
@@ -379,14 +376,14 @@ def read_answers(msg):
         return [default_answer]    
     answers = []
     r.lpush('multi-answer-questions', msg)
-    sleep(2.5)
+    sleep(5.5)
     key = encode(msg)
     answer_key = f'{key}-answers'
+    l = r.llen(f'{key}-answers')
 
     while(r.llen(f'{key}-answers')!=0):
-        item = r.lpop(f'{key}-answers')
-        answers.append(item.decode('utf-8'))
-    logger.info(f"HI THERE BODY !!!! HERE ARE OUR ANSWERS {answers}")
+            item = r.lpop(f'{key}-answers')
+            answers.append(item.decode('utf-8'))
     return answers
 
 
@@ -397,7 +394,6 @@ def read_answer(msg):
         return default_answer
 
     r.lpush('questions', msg)
-    logger.info("Processing answer")
     key = encode(msg)
     answer_key = f'{key}-answer'
     answer = r.get(answer_key)
