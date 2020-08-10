@@ -15,6 +15,54 @@ ALTER ROLE postgres SET default_transaction_isolation TO 'read committed';
 ALTER ROLE postgres SET timezone TO 'America/New_York';
 GRANT ALL PRIVILEGES ON DATABASE postgres TO postgres;
 
+CREATE SEQUENCE encodedmapping_id_seq;
+
+CREATE TABLE encodedmapping(
+    id integer NOT NULL DEFAULT nextval('encodedmapping_id_seq'),
+    answer varchar(550),
+    uuid varchar(250),
+    date_posted timestamptz DEFAULT NOW()
+);
+
+
+
+CREATE SEQUENCE channel_id_seq;
+
+CREATE TABLE channel(
+    id integer NOT NULL DEFAULT nextval('channel_id_seq'),
+    app_id varchar(250),
+    token varchar(250),
+    channel_id varchar(250),
+    team_id varchar(250),
+    user_id varchar(250),
+    date_added timestamptz DEFAULT NOW()
+);
+
+CREATE SEQUENCE question_id_seq;
+
+CREATE TABLE question(
+    id integer NOT NULL DEFAULT nextval('question_id_seq'),
+    date_posted timestamptz DEFAULT NOW(),
+    question varchar(2564),
+    channel_id varchar(250),
+    question_ts  varchar(250),
+    is_approved BOOLEAN DEFAULT FALSE,
+    UNIQUE(id)
+);
+
+CREATE SEQUENCE answer_id_seq;
+
+CREATE TABLE answer(
+    id integer NOT NULL DEFAULT nextval('answer_id_seq'),
+    question_id integer,
+    date_posted timestamptz DEFAULT NOW(),
+    is_dismissed BOOLEAN DEFAULT FALSE,
+    answer varchar(10564),
+    answer_ts varchar(250),
+    FOREIGN KEY(question_id) REFERENCES question(id) ON DELETE CASCADE,
+    UNIQUE(id) 
+);
+
 CREATE SEQUENCE permanent_id_seq;
 
 CREATE TABLE permanent (
@@ -34,7 +82,7 @@ CREATE TABLE deletable (
     answer_compressed varchar(250),
     question_compressed varchar(250),
     channel_id varchar(250),
-    date_addedd timestamptz DEFAULT NOW());
+    date_added timestamptz DEFAULT NOW());
 
 
 CREATE SEQUENCE pending_id_seq;
@@ -327,3 +375,14 @@ OWNED BY deletable.id;
 ALTER SEQUENCE permanent_id_seq
 OWNED BY permanent.id;
 
+ALTER SEQUENCE channel_id_seq
+OWNED BY channel.id;
+
+ALTER SEQUENCE question_id_seq
+OWNED BY question.id;
+
+ALTER SEQUENCE answer_id_seq
+OWNED BY answer.id;
+
+ALTER SEQUENCE encodedmapping_id_seq
+OWNED BY encodedmapping.id;
