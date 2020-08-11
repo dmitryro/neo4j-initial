@@ -54,16 +54,26 @@ def submit_edited(payload:dict, index:int):
     original_answer = payload["view"]["blocks"][0]["element"]["initial_value"]
     answer = payload["view"]["state"]["values"]["b-id"]["ml_input"]["value"]
     question = fetch_question(original_answer)
-
+    
     try:
+        mapping = EncodedMapping.find_by_answer(encode(original_answer))
+
+        if mapping:
+            uuid = mapping.uuid
+        else:
+            uuid = get_uuid()
+
         p = Permanent.find_by_action(action_id, token)
         if p:
             create_mapping(question, original_answer, answer)
             update_store(question, answer, operation='edit')
             logger.info(f"Updating or original answer \"{original_answer}\" with \"{answer}\"")
     except Exception as e:
+        uuid = get_uuid()
         logger.error("Failed processing permanent {e}")
-    answer_next(answer, user, channel_id, None, message_ts, index, action='approve')
+
+    EncodedMapping.update_future_answer(uuid, encode(answer))
+    answer_next(answer, uuid, user, channel_id, None, message_ts, index, action='confirm')
 
 
 def record_channel(payload:dict):
@@ -83,7 +93,7 @@ def record_channel(payload:dict):
 
 
 def answer(payload):
-    """ Anaswer a slack request """
+    """ Answer a slack request """
     question = payload['data']['text']#.split(None, 1)[1]
     real_answers = read_answers(question)
     user = payload['data']['user']
@@ -208,14 +218,22 @@ def make_permanent(payload:dict):
     p.save()              
 
 
+def answer_next_with_uuid_and_answer(uuid:str, user:dict, channel_id:str, trigger_id:str, index:int, action='approve'):
+    mapping = EncodedMapping.find_by_uuid(uuid)
+    message_ts = mapping.message_ts
+    future_answer = mapping.future_answer
+    EncodedMapping.update_answer(uuid, future_answer) 
+    answer_next(decode(future_answer), uuid, user, channel_id, trigger_id, message_ts, index, action=action)
+
+
 def answer_next_with_uuid(uuid:str, user:dict, channel_id:str, trigger_id:str, index:int, action='approve'):
     mapping = EncodedMapping.find_by_uuid(uuid)
     real_answer = decode(mapping.answer)
     message_ts = mapping.message_ts
-    answer_next(real_answer, user, channel_id, trigger_id, message_ts, index, action=action)
+    answer_next(real_answer, uuid, user, channel_id, trigger_id, message_ts, index, action=action)
     
 
-def answer_next(answer:str, user:dict, channel_id:str, trigger_id:str, message_ts:str, index:int, action='approve'):
+def answer_next(answer:str, uuid:str, user:dict, channel_id:str, trigger_id:str, message_ts:str, index:int, action='approve'):
     question = fetch_question(answer)
     answers = []
     if action == 'delete':
@@ -230,8 +248,8 @@ def answer_next(answer:str, user:dict, channel_id:str, trigger_id:str, message_t
     if not p:
         p = Pending(username=f"{user}", real_name=f"{user}", question=question)
         p.save()    
-   
-    respond_next(answer, question, answers, user, channel_id, trigger_id, message_ts, index, action=action)
+  
+    respond_next(answer, uuid, question, answers, user, channel_id, trigger_id, message_ts, index, action=action)
 
 
 def store(payload):
@@ -239,7 +257,6 @@ def store(payload):
     try:
         answer = payload['data']['text'].split(None, 1)[1]
         p = Pending.latest()
-        logger.info(f"LATEST ANSWERED WAS {p} - ANSWER GIVEN WAS {answer}")
 
         if p:
             update_store(p.question, answer, operation='store')

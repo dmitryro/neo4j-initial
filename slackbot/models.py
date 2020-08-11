@@ -18,6 +18,7 @@ class EncodedMapping(Base):
     id = Column(Integer, primary_key=True)
     question = Column(String(500), unique=False)
     answer = Column(String(500), unique=False)
+    future_answer = Column(String(1500), unique=False)
     message_ts = Column(String(230), unique=False)
     uuid = Column(String(230), unique=False)
     date_posted = Column(DateTime(timezone=True),
@@ -68,6 +69,21 @@ class EncodedMapping(Base):
         s.commit()
         return m
 
+    @staticmethod
+    def update_answer(uuid, answer):
+        """ Mark as answered """
+        s = session.obtain_session()
+        query = s.query(EncodedMapping).filter(EncodedMapping.uuid == uuid)
+        query.update({"answer": answer}, synchronize_session=False)
+        s.commit()
+
+    @staticmethod
+    def update_future_answer(uuid, answer):
+        """ Mark as answered """
+        s = session.obtain_session()
+        query = s.query(EncodedMapping).filter(EncodedMapping.uuid == uuid)
+        query.update({"future_answer": answer}, synchronize_session=False)
+        s.commit()
 
     @staticmethod
     def delete_by_answer(answer):

@@ -6,6 +6,7 @@ import logging
 import os
 from utils import read_env, read_approved
 from actions import answer_next_with_uuid, submit_edited, make_permanent
+from actions import answer_next_with_uuid_and_answer
 from actions import record_channel, make_nonpermanent
 from bot import bot
 from time import sleep
@@ -93,8 +94,12 @@ async def processs_approvals(approvals) -> None:
         user = approval['user']
         channel_id = approval['channel']['id']
         message_ts = approval['container']['message_ts']
-        answer = approval['actions'][0]['selected_option']['value'].split('approve_')[1]
-        answer_next_with_uuid(answer, user, channel_id, None, index, action='approve')
+        if approval['actions'][0].get('selected_option', None):
+            uuid = approval['actions'][0]['selected_option']['value'].split('approve_')[1]
+            answer_next_with_uuid(uuid, user, channel_id, None, index, action='approve')
+        else:
+            uuid = approval['actions'][0]['value'].split('approve_')[1] 
+            answer_next_with_uuid_and_answer(uuid, user, channel_id, None, index, action='approve')
         index = index + 1 
         sleep(3.5)
 

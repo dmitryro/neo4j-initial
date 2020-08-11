@@ -237,9 +237,31 @@ def delete_ephemeral(channel_id, message_ts):
     except Exception as e:
         logger.error(f"Failed deleting ephemeral message from channel {channel_id} with timestamp {message_ts}")
         
+def confirm_blocks(text, uuid):
+    approve_key = f"approve_{uuid}"
+    blocks = [{
+              "type": "section",
+              "text": {
+                  "type": "mrkdwn",
+                  "text": text
+              },
+              "accessory": {
+                  "type": "button",
+                  "text": {
+                      "type": "plain_text",
+                      "text": "Post"
+                  },
+                  "value": approve_key,
+                  "action_id": "answer_action"
+              }
+             }]
+    return blocks
 
-def respond_next(answer:str, question:str, answers:list, user:dict, channel_id:str, 
+
+def respond_next(answer:str, uuid:str, question:str, answers:list, user:dict, channel_id:str, 
                 trigger_id:str, message_ts:str, index:int, action='approve'):
+
+    logger.info(f"!!! ---------------------------> STEP 3 UUID {uuid} USER {user}")
     token=read_env("SLACK_TOKEN")
     if action == 'approve':
         try:
@@ -258,6 +280,39 @@ def respond_next(answer:str, question:str, answers:list, user:dict, channel_id:s
             assert e.response["ok"] is False
             assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
             logger.error(f"Got an error in respond approved : {e.response['error']}")
+    elif action == 'confirm':
+        try:
+            logger.info(f"2.OUR DEAR USER ! {user}")
+            logger.info("Updating the message ...")
+            #response = client.chat_update(
+            #    token=bot_token,
+            #    channel=channel_id,
+            #    #blocks=blocks,
+            #    text="HI",
+            #    ts=message_ts,
+            #    as_user=True
+            #)
+
+            user_id = user['id']
+            username = user['username']
+            text = f'Hi admin! Edited the answer to the question by the user <@{user_id}> to be "{answer}".'
+            blocks = confirm_blocks(text, uuid)
+            response = client.chat_postEphemeral(
+                channel=channel_id,
+                as_user=False,
+                user=user_id,
+                icon_emoji=":chart_with_upwards_trend:",
+                username='kbpro',
+                blocks=blocks,
+                thread_ts=None #thread_ts
+            )
+
+        except SlackApiError as e:
+            # You will get a SlackApiError if "ok" is False
+            assert e.response["ok"] is False
+            assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
+            logger.error(f"Got an error in delete {message_ts}: {e.response}")
+
 
     elif action == 'dismiss':
         try:

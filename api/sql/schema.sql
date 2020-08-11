@@ -20,7 +20,8 @@ CREATE SEQUENCE encodedmapping_id_seq;
 CREATE TABLE encodedmapping(
     id integer NOT NULL DEFAULT nextval('encodedmapping_id_seq'),
     question varchar(550),
-    answer varchar(550),
+    answer varchar(1550),
+    future_answer varchar(1500),
     message_ts varchar(260),
     uuid varchar(250),
     date_posted timestamptz DEFAULT NOW()

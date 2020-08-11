@@ -58,6 +58,8 @@ def process_block_actions(slack_request: dict):
     else:
         if action['type']=='checkboxes' and len(action['selected_options'])==0:
             producer.send('make_nonpermanent', key=bytes(msg), value=bytes(msg))
+        elif action['type']=='button':
+            producer.send('approve', key=bytes(msg), value=bytes(msg))
         else:
             value = action["selected_option"]["value"] 
 
