@@ -60,7 +60,6 @@ def process_block_actions(slack_request: dict):
             producer.send('make_nonpermanent', key=bytes(msg), value=bytes(msg))
         else:
             value = action["selected_option"]["value"] 
-            logger.info(f"THIS IS OUR CASE IN API {slack_request}")
 
             if 'approve_' in value: 
                 redis_store(msg, 'approve')
@@ -71,11 +70,13 @@ def process_block_actions(slack_request: dict):
             elif 'edit_' in value:
                 redis_store(msg, 'edit')
                 producer.send('edit', key=bytes(msg), value=bytes(msg))    
+            elif 'delete_' in value:
+                redis_store(msg, 'delete')
+                producer.send('delete', key=bytes(msg), value=bytes(msg))
             else:
+                redis_store(msg, 'dismiss')
                 producer.send('dismiss', key=bytes(msg), value=bytes(msg))
 
-
-    #if action["action_id"]: == "answer_action":
     result = {} 
     return make_response(jsonify(result), status.HTTP_204_NO_CONTENT)
 

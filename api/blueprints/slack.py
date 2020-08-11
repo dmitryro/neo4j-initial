@@ -16,6 +16,54 @@ slack_blueprint = Blueprint('slack', __name__, template_folder='templates')
 logger = LocalProxy(lambda: current_app.logger)
 
 
+@slack_blueprint.route("/api/store", methods=['GET'])
+def store_action():
+    try:
+        result = {"message": "success"}
+        logger.debug(f"Stored an answer ...")
+        return make_response(jsonify(result), status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error reading the site {id} - {e}")
+        result = {"error": str(e)}
+        return make_response(jsonify(result), status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@slack_blueprint.route("/api/qa", methods=['GET'])
+def qa_action():
+    try:
+        result = {"message": "success"}
+        logger.debug(f"Reading the Slack data ...")
+        return make_response(jsonify(result), status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error reading the site {id} - {e}")
+        result = {"error": str(e)}
+        return make_response(jsonify(result), status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@slack_blueprint.route("/api/pr", methods=['GET'])
+def pr_action():
+    try:
+        result = {"message": "success"}
+        logger.debug(f"Reading the Slack data ...")
+        return make_response(jsonify(result), status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error reading the site {id} - {e}")
+        result = {"error": str(e)}
+        return make_response(jsonify(result), status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@slack_blueprint.route("/api/jira", methods=['GET'])
+def jira_action():
+    try:
+        result = {"message": "success"}
+        logger.debug(f"Reading the Slack data ...")
+        return make_response(jsonify(result), status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error reading the site {id} - {e}")
+        result = {"error": str(e)}
+        return make_response(jsonify(result), status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @slack_blueprint.route("/api/interactive", methods=['POST'])
 def slack_action():
     """

@@ -6,7 +6,9 @@ from aredis import StrictRedis
 import asyncio
 from datetime import datetime
 import faust
-from graph import find_answer, find_answers, find_question, add_question, edit_question
+from graph import find_answer, find_answers, find_question 
+from graph import add_question, edit_question, delete_question
+from graph import delete_answer
 import json
 import logging
 from redis import StrictRedis as RegularStrictRedis
@@ -118,6 +120,7 @@ async def produce_answered():
         add_question(**d)
         await store_question.send(value=q)
 
+
 async def produce_multi_ans_questions():
     logger.info(f"We are about to produce questions requiring multiple  answers")
     while(await ar.llen('multi-answer-questions')!=0):
@@ -129,7 +132,22 @@ async def produce_multi_ans_questions():
         for answer in answers:
              await ar.lpush(f'{key}-answers', answer)
         l = len(answers)
-  
+
+ 
+async def produce_delete_answers():
+    while(await ar.llen('deletable_answers')!=0):
+        item = await ar.lpop('deletable_answers')
+        d = json.loads(item)   
+        delete_answer(d['question'], d['answer'])
+
+
+async def produce_delete_questions():
+    while(await ar.llen('deletable_questions')!=0):
+        item = await ar.lpop('deletable_questions')
+        d = json.loads(item)
+        delete_question(d['question'])
+
+
 async def produce_edited():
     logger.info(f"We are about to produce edited answers")
 
@@ -185,6 +203,8 @@ async def producer():
     await produce_extended()
     await produce_searched_questions()
     await produce_multi_ans_questions()
+    await produce_delete_answers()
+    await produce_delete_questions()
 
 def run_producer(msg):
     r.lpush('questions', msg)

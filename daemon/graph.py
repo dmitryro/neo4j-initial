@@ -17,7 +17,19 @@ def create_question_index(tx, question):
 
 
 def delete_all_nodes(tx):
-    tx.run("MATCH (n) DETACH DELETE n")
+    with driver.session() as session:
+        results = session.run(Query("MATCH (q: Question) DETACH DELETE q", timeout=3.0))
+
+def delete_by_answer(tx, question, answer):
+    with driver.session() as session:
+        results = session.run(Query("MATCH (q: Question) WHERE (apoc.text.levenshteinDistance($question, q.question) < 3.0 AND q.answer = $answer) DETACH DELETE q", timeout=3.0), 
+                              question=question, answer=answer)
+
+def delete_by_question(tx, question):
+    with driver.session() as session:
+        results = session.run(Query("MATCH (q: Question) WHERE apoc.text.levenshteinDistance($question, q.question) < 3.0 DETACH DELETE q", timeout=3.0),
+                              question=question)
+
 
 
 def search_answers(tx, question):
@@ -62,6 +74,7 @@ def initiate_indexes():
         driver.close()
 
     except Exception as e:
+        logger.error(f"Failed initiating indexes - {e}")
         answ = None
     
 
@@ -73,9 +86,32 @@ def delete_all():
             answer = session.write_transaction(delete_all_nodes, None)
             session.close()
         driver.close()
-
     except Exception as e:
-        pass
+        logger.error(f"Failed deleting a node - {e}")
+
+def delete_answer(question, answer):
+    """ Initialize any indexes """
+    try:
+        driver = GraphDatabase.driver(uri, auth=basic_auth(USER, PASS), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+        with driver.session() as session:
+            answer = session.write_transaction(delete_by_answer, question, answer)
+            session.close()
+        driver.close()
+    except Exception as e:
+        logger.error(f"Failed deleting a node - {e}")
+
+
+def delete_question(question):
+    """ Initialize any indexes """
+    try:
+        driver = GraphDatabase.driver(uri, auth=basic_auth(USER, PASS), encrypted=False, max_connection_lifetime=3600, trust=neo4j.TRUST_ALL_CERTIFICATES)
+        with driver.session() as session:
+            resultr = session.write_transaction(delete_by_question, question)
+            session.close()
+        driver.close()
+    except Exception as e:
+        logger.error(f"Failed deleting a node - {e}")
+
 
 def find_answers(question):
     """ Find an answer """
@@ -146,9 +182,7 @@ def extend_at_position(answer, index, addition):
 
 
 def edit_existing_question(tx, question, answer):
-    logger.info(f"NOW NOW NOW NOW NOW! LET US MATCH IT!!!!!!!!!!!!!!!!!!!!!!!  Q:{question} A:{answer}")
     result = tx.run("MATCH (q:Question{question:$question}) SET q.answer = $answer", question=question, answer=answer)
-    logger.info(f"AND THE RESULT!!!!!!!!!!!!!!!!!!!!!{result}")
     return result
 
 

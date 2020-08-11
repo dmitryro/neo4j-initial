@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 from models import Pending, Mapping, Deletable, Permanent, Channel, EncodedMapping
 from utils import read_answer, read_answers, store_answer, read_question
-from utils import  edit_answer, extend_answer
+from utils import  edit_answer, extend_answer, delete_answer
 from utils import decode, encode, respond, read_env
 from utils import respond_next, delete_ephemeral, get_uuid
 
@@ -119,18 +119,28 @@ def answer(payload):
         encmapping = EncodedMapping.find_by_answer(encode(answer))
         if not encmapping:
             uuid = get_uuid()
-            encmapping = EncodedMapping(answer=encode(answer), uuid=uuid, message_ts=message_ts)
+            encmapping = EncodedMapping(question=encode(thing), answer=encode(answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
         answers.append({encode(answer):encmapping.uuid})
     if len(real_answers) == 0:
             uuid = get_uuid()
-            encmapping = EncodedMapping(answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
+            encmapping = EncodedMapping(question=encode(thing), answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
             answers.append({encode(default_answer):encmapping.uuid})           
 
     respond(payload, text=None, question=thing, answers=answers,  ephemeral=ephemeral)
  
 
+def prepare_answers(real_answers, message_ts):
+    answers = []
+    for answer in real_answers:
+        encmapping = EncodedMapping.find_by_answer(encode(answer))
+        if not encmapping:
+            uuid = get_uuid()
+            encmapping = EncodedMapping(answer=encode(answer), uuid=uuid, message_ts=message_ts)
+            encmapping.save()
+        answers.append({encode(answer):encmapping.uuid})
+    return answers
 
 def preview_answer(payload):
     """ Answer a slack request """
@@ -177,19 +187,10 @@ def preview_answer(payload):
         deletable.save()    
     preview_answer=f'Hi admin! The user <@{user}> just asked' # "{thing}" and the answer I\'m suggesting is "{answer}" - please approve or dismiss!'   
 
-    answers = []
-
-    for answer in real_answers:
-        encmapping = EncodedMapping.find_by_answer(encode(answer))
-        if not encmapping:
-            uuid = get_uuid()
-            encmapping = EncodedMapping(answer=encode(answer), uuid=uuid, message_ts=message_ts)
-            encmapping.save()
-        answers.append({encode(answer):encmapping.uuid})
-
+    answers = prepare_answers(real_answers, message_ts)
     if len(real_answers) == 0:
             uuid = get_uuid()
-            encmapping = EncodedMapping(answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
+            encmapping = EncodedMapping(question=encode(thing), answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
             answers.append({encode(default_answer):encmapping.uuid})
 
@@ -222,7 +223,15 @@ def answer_next_with_uuid(uuid:str, user:dict, channel_id:str, trigger_id:str, i
 
 def answer_next(answer:str, user:dict, channel_id:str, trigger_id:str, message_ts:str, index:int, action='approve'):
     question = fetch_question(answer)
-    respond_next(answer, question, user, channel_id, trigger_id, message_ts, index, action=action)
+    answers = []
+    if action == 'delete':
+        logger.info("fDeleting answer {answer} for question {question}")
+        delete_answer(question, answer)
+        EncodedMapping.delete_by_answer(encode(answer))
+        real_answers = read_answers(question) 
+        answers = prepare_answers(real_answers, message_ts)
+        logger.info(f"------------> Deleted answer {answer} ... {question} ") 
+    respond_next(answer, question, answers, user, channel_id, trigger_id, message_ts, index, action=action)
 
 
 def store(payload):

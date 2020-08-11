@@ -20,7 +20,9 @@ from time import sleep
 logger = logging.getLogger(__name__)
 read_env = lambda property: os.environ.get(property, None) 
 default_answer = read_env("SLACK_DEFAULT_ANSWER")
-client = WebClient(token=read_env("SLACK_TOKEN"))
+bot_token=read_env("SLACK_TOKEN")
+user_token=read_env('SLACK_USER_TOKEN')
+client = WebClient(token=bot_token)
 
 redis = dict()
 redis['db'] = read_env('REDIS_DB')
@@ -125,6 +127,7 @@ def read_answer_block(ans, index):
     dismiss_key = f"dismiss_{uuid}"
     edit_key = f"edit_{uuid}"
     delete_key = f"delete_{uuid}"
+    qa_key = f"qa_{uuid}"
 
     block = {"type":"section",
              "text": {
@@ -162,6 +165,13 @@ def read_answer_block(ans, index):
                             "text": "Delete",
                         },
                         "value": delete_key
+                      },
+                      {
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Make it Q/A",
+                        },
+                        "value": qa_key
                       }
                   ] # Options end
               } # Accessory end
@@ -228,7 +238,8 @@ def delete_ephemeral(channel_id, message_ts):
         logger.error(f"Failed deleting ephemeral message from channel {channel_id} with timestamp {message_ts}")
         
 
-def respond_next(answer:str, question:str, user:dict, channel_id:str, trigger_id:str, message_ts:str, index:int, action='approve'):
+def respond_next(answer:str, question:str, answers:list, user:dict, channel_id:str, 
+                trigger_id:str, message_ts:str, index:int, action='approve'):
     token=read_env("SLACK_TOKEN")
     if action == 'approve':
         try:
@@ -283,24 +294,31 @@ def respond_next(answer:str, question:str, user:dict, channel_id:str, trigger_id
             assert e.response["ok"] is False
             assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found' 
             logger.error(f"Got an error in respond edit : {e} - {e.response['error']} - {e.response['response_metadata']}")      
+    elif action == 'qa':
+        pass
 
+    elif action == 'pr':
+        pass
+
+    elif action == 'jira':
+        pass   
     elif action == 'delete':
         blocks = [{"type": "section", "text": {"type": "plain_text", "text": "Hello world"}}]
         try:
-            response = client.chat_update(
-                token=token,
-                channel=channel_id,
-                blocks=blocks,
-                ts=message_ts,
-                as_user=True
-            ) 
+            logger.info("Updating the message ...")
+            #response = client.chat_update(
+            #    token=bot_token,
+            #    channel=channel_id,
+            #    blocks=blocks,
+            #    ts=message_ts,
+            #    as_user=True
+            #) 
         except SlackApiError as e:
             # You will get a SlackApiError if "ok" is False
             assert e.response["ok"] is False
             assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
             logger.error(f"Got an error in delete {message_ts}: {e.response}")
-        
-
+    
 
 def respond(payload, text=None, question=None, answers=[{encode(default_answer):get_uuid()}], ephemeral=False):
     data = payload['data']
@@ -373,6 +391,17 @@ def edit_answer(question, answer):
     r.lpush('edited', json.dumps(msg).encode('utf-8'))
     logger.info(f"Storing edited answer  in NEO4J - {question} {answer}")
 
+def delete_answer(question, answer):
+    ans = {"answer": answer, "question": question}
+    r.lpush('deletable_answers', json.dumps(ans).encode('utf-8'))
+    sleep(2.5)
+    logger.info("We are deleting this answer - {answer}")    
+
+def delete_question(question):
+    q = {"question": question}
+    r.lpush('deletable_questions', json.dumps(q).encode('utf-8'))
+    sleep(2.5)
+    logger.info("We are deleting this question - {q}")
 
 def read_question(msg):
     if not msg:
