@@ -16,7 +16,9 @@ Base = declarative_base()
 
 class EncodedMapping(Base):
     id = Column(Integer, primary_key=True)
+    question = Column(String(500), unique=False)
     answer = Column(String(500), unique=False)
+    message_ts = Column(String(230), unique=False)
     uuid = Column(String(230), unique=False)
     date_posted = Column(DateTime(timezone=True),
                                  server_default=func.now(),
@@ -25,10 +27,13 @@ class EncodedMapping(Base):
 
     __tablename__ = "encodedmapping"    
  
-    def __init__(self, answer=None,
-                  uuid=None):
+    def __init__(self, question=None,
+                 answer=None,
+                 uuid=None, message_ts=None):
+         self.question = question
          self.answer = answer
          self.uuid = uuid
+         self.message_ts = message_ts
          self.date_posted = func.now()
      
 
@@ -80,6 +85,23 @@ class EncodedMapping(Base):
         m = s.query(EncodedMapping).filter(EncodedMapping.answer==answer).first()
         s.commit()
         return m
+
+    @staticmethod
+    def delete_by_question(question):
+        """ Read latest mapping """
+        s = session.obtain_session()
+        m = s.query(EncodedMapping).filter(EncodedMapping.question==question).first()
+        s.delete(m)
+        s.commit()
+
+    @staticmethod
+    def find_by_question(question):
+        """ Read latest mapping """
+        s = session.obtain_session()
+        m = s.query(EncodedMapping).filter(EncodedMapping.question==question).first()
+        s.commit()
+        return m
+
 
 class Question(Base):
     id = Column(Integer, primary_key=True)
