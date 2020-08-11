@@ -1,3 +1,4 @@
+import shortuuid
 import base64
 import os
 
@@ -9,19 +10,28 @@ def enncode_int_id(message):
 def decode_int_id(message):
     pass
 
+
+def get_uuid():
+    shortuuid.set_alphabet("abcdefghijklmnopqrstuvwxyz0123456789")
+    return shortuuid.uuid()
+
+
 def encode(message):
-    """ Provide simple base 64 encoding """
     if not message:
         return ""
     message_bytes = message.encode('utf-8')
-    base64_bytes = base64.b64encode(message_bytes)
+    base64_bytes = base64.a85encode(message_bytes)
     base64_message = base64_bytes.decode('utf-8')
-    return base64_message
+    return str(base64_message)
 
 
 def decode(base64_message):
-    """ Provide simple base 64 decoding """
     base64_bytes = base64_message.encode('utf-8')
-    message_bytes = base64.b64decode(base64_bytes)
+    message_bytes = base64.a85decode(base64_bytes)
     message = message_bytes.decode('utf-8')
-    return message
+    return str(message)
+
+
+
+
+
