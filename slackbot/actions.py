@@ -17,7 +17,6 @@ def fetch_question(answer):
 
 
 def update_store(question, answer, operation='edit'):
-    logger.info(f"NOW I WILL STORE!!!! {question} -- {answer}")
     if operation=='store':
         store_answer(question, answer)
     else:
@@ -61,10 +60,9 @@ def submit_edited(payload:dict, index:int):
         if p:
             create_mapping(question, original_answer, answer)
             update_store(question, answer, operation='edit')
-            logger.info(f"We are updating or original answer \"{original_answer}\" with \"{answer}\"")
+            logger.info(f"Updating or original answer \"{original_answer}\" with \"{answer}\"")
     except Exception as e:
         logger.error("Failed processing permanent {e}")
-    logger.info(f"!!! ====> WE EDITED ANSWER {answer} for index {index}")
     answer_next(answer, user, channel_id, None, message_ts, index, action='approve')
 
 
@@ -230,7 +228,7 @@ def answer_next(answer:str, user:dict, channel_id:str, trigger_id:str, message_t
         EncodedMapping.delete_by_answer(encode(answer))
         real_answers = read_answers(question) 
         answers = prepare_answers(real_answers, message_ts)
-        logger.info(f"------------> Deleted answer {answer} ... {question} ") 
+        logger.info(f"Deleted answer {answer} ... {question} ") 
     respond_next(answer, question, answers, user, channel_id, trigger_id, message_ts, index, action=action)
 
 
