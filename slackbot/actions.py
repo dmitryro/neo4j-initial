@@ -84,32 +84,31 @@ def record_channel(payload:dict):
 
 def answer(payload):
     """ Anaswer a slack request """
-    thing = payload['data']['text']#.split(None, 1)[1]
-    #answer = read_answer(thing)
-    real_answers = read_answers(thing)
+    question = payload['data']['text']#.split(None, 1)[1]
+    real_answers = read_answers(question)
     user = payload['data']['user']
     message_ts = payload['data']['ts']
 
     if not real_answers:
-        p = Pending(username=f"{user}", real_name=f"{user}", question=thing)
+        p = Pending(username=f"{user}", real_name=f"{user}", question=question)
         p.save()
         real_answers = [{encode(default_answer):get_uuid()}]
         ephemeral=True
     else:
         ephemeral=False
-        mapping = Mapping.find_by_question(thing)
+        mapping = Mapping.find_by_question(question)
         if mapping:
             mapping.compressed_answer = encode(real_answers[0])
             mapping.update()
 
         else:
             mapping = Mapping(answer_compressed=str(encode(real_answers[0])),
-                              question_compressed=str(encode(thing)), version=0.01)
+                              question_compressed=str(encode(question)), version=0.01)
             mapping.save()
 
-        p = Pending.latest_by_question(thing)
+        p = Pending.latest_by_question(question)
         if not p:
-            p = Pending(username=user, real_name=user, question=thing)
+            p = Pending(username=f"{user}", real_name=f"{user}", question=question)
             p.save()
     answers = []
 
@@ -117,16 +116,16 @@ def answer(payload):
         encmapping = EncodedMapping.find_by_answer(encode(answer))
         if not encmapping:
             uuid = get_uuid()
-            encmapping = EncodedMapping(question=encode(thing), answer=encode(answer), uuid=uuid, message_ts=message_ts)
+            encmapping = EncodedMapping(question=encode(question), answer=encode(answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
         answers.append({encode(answer):encmapping.uuid})
     if len(real_answers) == 0:
             uuid = get_uuid()
-            encmapping = EncodedMapping(question=encode(thing), answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
+            encmapping = EncodedMapping(question=encode(question), answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
             answers.append({encode(default_answer):encmapping.uuid})           
 
-    respond(payload, text=None, question=thing, answers=answers,  ephemeral=ephemeral)
+    respond(payload, text=None, question=question, answers=answers,  ephemeral=ephemeral)
  
 
 def prepare_answers(real_answers, message_ts):
@@ -142,17 +141,17 @@ def prepare_answers(real_answers, message_ts):
 
 def preview_answer(payload):
     """ Answer a slack request """
-    thing = payload['data']['text']#.split(None, 1)[1]
-    real_answers = read_answers(thing)
+    question = payload['data']['text']#.split(None, 1)[1]
+    real_answers = read_answers(question)
     user = payload['data']['user']
     message_ts = payload['data']['ts']
-    question_compressed = encode(thing)
+    question_compressed = encode(question)
     channel_id = payload['data']['channel']
 
+    p = Pending(username=f"{user}", real_name=f"{user}", question=question)
+    p.save()
 
     if len(real_answers) == 0:
-        p = Pending(username=f"{user}", real_name=f"{user}", question=thing)
-        p.save()
         key = encode(default_answer)
         value = get_uuid()
         ans = {}
@@ -161,20 +160,17 @@ def preview_answer(payload):
         ephemeral=True
     else:
         ephemeral=False
-        mapping = Mapping.find_by_question(thing)
+        mapping = Mapping.find_by_question(question)
         if mapping:
             mapping.compressed_answer = encode(real_answers[0])
             mapping.update()
 
         else:
             mapping = Mapping(answer_compressed=str(encode(real_answers[0])),
-                              question_compressed=str(encode(thing)), version=0.01)
+                              question_compressed=str(encode(question)), version=0.01)
             mapping.save()
 
-        p = Pending.latest_by_question(thing)
-        if not p:
-            p = Pending(username=user, real_name=user, question=thing)
-            p.save()
+        p = Pending.latest_by_question(question)
 
     if len(real_answers):
         answer_compressed = encode(real_answers[0])
@@ -183,16 +179,16 @@ def preview_answer(payload):
                               channel_id=channel_id,
                               message_ts=message_ts)
         deletable.save()    
-    preview_answer=f'Hi admin! The user <@{user}> just asked' # "{thing}" and the answer I\'m suggesting is "{answer}" - please approve or dismiss!'   
+    preview_answer=f'Hi admin! The user <@{user}> just asked' 
 
     answers = prepare_answers(real_answers, message_ts)
     if len(real_answers) == 0:
             uuid = get_uuid()
-            encmapping = EncodedMapping(question=encode(thing), answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
+            encmapping = EncodedMapping(question=encode(question), answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
             answers.append({encode(default_answer):encmapping.uuid})
 
-    respond(payload, text=preview_answer, question=thing, answers=answers, ephemeral=True)
+    respond(payload, text=preview_answer, question=question, answers=answers, ephemeral=True)
 
 
 def make_nonpermanent(payload:dict):
@@ -229,19 +225,26 @@ def answer_next(answer:str, user:dict, channel_id:str, trigger_id:str, message_t
         real_answers = read_answers(question) 
         answers = prepare_answers(real_answers, message_ts)
         logger.info(f"Deleted answer {answer} ... {question} ") 
+
+    p = Pending.latest_by_question(question)
+    if not p:
+        p = Pending(username=f"{user}", real_name=f"{user}", question=question)
+        p.save()    
+   
     respond_next(answer, question, answers, user, channel_id, trigger_id, message_ts, index, action=action)
 
 
 def store(payload):
     """ """
     try:
-        thing = payload['data']['text'].split(None, 1)[1]
+        answer = payload['data']['text'].split(None, 1)[1]
         p = Pending.latest()
+        logger.info(f"LATEST ANSWERED WAS {p} - ANSWER GIVEN WAS {answer}")
 
         if p:
-            update_store(p.question, thing, operation='store')
+            update_store(p.question, answer, operation='store')
             p.mark_as_answered()
-            msg = f'Stored answer to question by  <@{p.username}>:  {thing}'
+            msg = f'Stored answer to question by  <@{p.username}>:  {answer}'
         else:
             msg = "I was unable to store a response"
     except Exception as e:
@@ -250,11 +253,10 @@ def store(payload):
 
     respond(payload, text=msg, ephemeral=True)
 
-
 def relate(payload):
     """ """
     try:
-        logger.info(f"IDs we got were {thing}")
+        logger.info("IDs we got were ")
         msg = f'Marked two questions as related'
     except Exception as e:
         logger.error(f"Was unable to store the answer {e}")
@@ -266,28 +268,28 @@ def relate(payload):
 def edit(payload):
     """ Amend recent answer """
     try:
-        thing = payload['data']['text'].split(None, 1)[1]
-        mapping = Mapping.find_by_answer(thing)
+        ans = payload['data']['text'].split(None, 1)[1]
+        mapping = Mapping.find_by_answer(ans)
 
         if mapping:
             answer = decode(mapping.answer_compressed)
             question = decode(mapping.question_compressed)
-            mapping.answer_compressed=encode(thing)
+            mapping.answer_compressed=encode(ans)
             mapping.update()
         else:
             latest = Pending.latest_answered()
             if not latest:
-                question = read_question(thing)
+                question = read_question(ans)
             else:
                 question = latest.question
 
             answer = read_answer(question)
             mapping = Mapping(question_compressed=str(encode(question)),
-                              answer_compressed=str(encode(thing)), version=0.01)
+                              answer_compressed=str(encode(ans)), version=0.01)
             mapping.save()
 
-        edit_answer(question, thing)
-        msg = f'Edited previous answer "{answer}" given to question "{question} to become {thing}" '
+        edit_answer(question, ans)
+        msg = f'Edited previous answer "{answer}" given to question "{question} to become {ans}" '
     except Exception as e:
         logger.error(f"Was unable to amend/edit the answer {e}")
         msg = f'Was unable to amend/edit - mapping not found {e}'

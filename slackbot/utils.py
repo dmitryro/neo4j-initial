@@ -303,16 +303,29 @@ def respond_next(answer:str, question:str, answers:list, user:dict, channel_id:s
     elif action == 'jira':
         pass   
     elif action == 'delete':
-        blocks = [{"type": "section", "text": {"type": "plain_text", "text": "Hello world"}}]
         try:
             logger.info("Updating the message ...")
             #response = client.chat_update(
             #    token=bot_token,
             #    channel=channel_id,
-            #    blocks=blocks,
+            #    #blocks=blocks,
+            #    text="HI",
             #    ts=message_ts,
             #    as_user=True
-            #) 
+            #)
+            user_id = user['id']
+            username = user['username']
+            response = client.chat_postEphemeral(
+                channel=channel_id,
+                as_user=False,
+                user=user_id,
+                icon_emoji=":chart_with_upwards_trend:",
+                text=f'Hi admin! Deleted the answer "{answer}" to the question by the user <@{user_id}> permanently.',
+                username='kbpro',
+                thread_ts=None #thread_ts
+            )
+
+
         except SlackApiError as e:
             # You will get a SlackApiError if "ok" is False
             assert e.response["ok"] is False
@@ -327,9 +340,7 @@ def respond(payload, text=None, question=None, answers=[{encode(default_answer):
     channel_id = data['channel']
     thread_ts = data['ts']
     user = data['user']
-    logger.info(f"LAL LAL LAL before {answers}")
     blocks=read_blocks(text=text, answers=answers, question=question)
-    logger.info(f"LOL LOL LOL after  {answers} - {blocks}")
     try:
         if (ephemeral):
             response = web_client.chat_postEphemeral(
