@@ -5,7 +5,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import *
 
-from utils import obtain_session, encode
+from utils import obtain_session, encode, get_uuid
 from session import SessionManager
 
 session = SessionManager() 
@@ -13,6 +13,59 @@ session = SessionManager()
 logger = logging.getLogger(__name__)
 
 Base = declarative_base()
+
+class Config(Base):
+    id = Column(Integer, primary_key=True)
+    is_atomatic = Column(Boolean(), default=False)
+    date_updated = Column(DateTime(timezone=True),
+                                   server_default=func.now(),
+                                   nullable=True,
+                                   default=None)
+    email = Column(String(500), unique=False)
+    session_id = Column(String(500), unique=False)
+
+    __tablename__ = "config"
+
+    def __init__(self, is_atomatic=False,
+                       email=None,
+                       session_id=None,
+                       date_updated=func.now()):
+        self.is_automatic = is_automatic
+        self.date_updated = date_updated
+        self.session_id = session_id
+        self.email = email
+
+    def save(self):
+        """ Save encodedmapping """
+        s = session.obtain_session()
+        s.add(self)
+        s.commit()
+
+    @staticmethod
+    def automatic(self, on=False):
+        """ Mark as answered """
+        s = session.obtain_session()
+        query = s.query(Config).filter(Config.id == 1)
+        if not query:
+            config = Config(is_automatic=False, email='info@gmail.com', session_id = get_uuid())
+            config.save()
+        query.update({"is_atomatic": on}, synchronize_session=False)
+        s.commit()
+
+    @staticmethod
+    def find_by_id(id):
+        """ Read latest mapping """
+        s = session.obtain_session()
+        m = s.query(Config).filter(Config.id==id).first()
+        s.commit()
+        return m
+
+    def delete(self):
+        """ Delete config - no longer used """
+        s = obtain_session()
+        s.delete(self)
+        s.commit()
+        s.flush()
 
 class EncodedMapping(Base):
     id = Column(Integer, primary_key=True)

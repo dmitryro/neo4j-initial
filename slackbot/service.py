@@ -8,6 +8,7 @@ from utils import read_env, read_approved
 from actions import answer_next_with_uuid, submit_edited, make_permanent
 from actions import answer_next_with_uuid_and_answer
 from actions import record_channel, make_nonpermanent
+from actions import auto_slash_command, store_slash_command
 from bot import bot
 from time import sleep
 #from kafka import KafkaConsumer
@@ -20,6 +21,8 @@ dismissal_topic = app.topic("dismiss")
 delete_topic = app.topic("delete")
 make_permanent_topic = app.topic("make_permanent")
 make_nonpermanent_topic = app.topic("make_nonpermanent")
+store_topic = app.topic("store")
+auto_topic =  app.topic("auto")
 submit_edited_topic = app.topic("submit_edited")
 answers_table = app.Table("answers", default=str)
 questions_table = app.Table("questions", default=str)
@@ -48,7 +51,20 @@ async def processs_submissions(submissions) -> None:
         submit_edited(payload, index)
         index = index + 1
 
- 
+
+@app.agent(store_topic)
+async def process_store_channel(stores) -> None:
+    async for payload in stores:
+        logger.info(f"===========+>WE GOT OUR VALUES - ROUTING IT {payload}")
+        store_slash_command(payload)
+
+
+@app.agent(auto_topic)
+async def process_auto_channel(autos) -> None:
+    async for payload in autos:
+        auto_slash_command(payload) 
+
+
 @app.agent(record_channel_topic)
 async def process_record_channel(channels) -> None:
     async for payload in channels:

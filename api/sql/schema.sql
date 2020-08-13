@@ -15,6 +15,16 @@ ALTER ROLE postgres SET default_transaction_isolation TO 'read committed';
 ALTER ROLE postgres SET timezone TO 'America/New_York';
 GRANT ALL PRIVILEGES ON DATABASE postgres TO postgres;
 
+CREATE SEQUENCE config_id_seq;
+ 
+CREATE TABLE config(
+    id integer NOT NULL DEFAULT nextval('config_id_seq'),
+    email varchar(550),
+    session_id varchar(550),
+    is_atomatic BOOLEAN DEFAULT FALSE, 
+    date_updated timestamptz DEFAULT NOW()    
+);
+
 CREATE SEQUENCE encodedmapping_id_seq;
 
 CREATE TABLE encodedmapping(
@@ -389,3 +399,6 @@ OWNED BY answer.id;
 
 ALTER SEQUENCE encodedmapping_id_seq
 OWNED BY encodedmapping.id;
+
+ALTER SEQUENCE config_id_seq
+OWNED BY config.id;

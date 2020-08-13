@@ -261,7 +261,6 @@ def confirm_blocks(text, uuid):
 def respond_next(answer:str, uuid:str, question:str, answers:list, user:dict, channel_id:str, 
                 trigger_id:str, message_ts:str, index:int, action='approve'):
 
-    logger.info(f"!!! ---------------------------> STEP 3 UUID {uuid} USER {user}")
     token=read_env("SLACK_TOKEN")
     if action == 'approve':
         try:
@@ -390,17 +389,19 @@ def respond_next(answer:str, uuid:str, question:str, answers:list, user:dict, ch
 
 def respond(payload, text=None, question=None, answers=[{encode(default_answer):get_uuid()}], ephemeral=False):
     data = payload['data']
-    web_client = payload['web_client']
-    rtm_client = payload['rtm_client']
     channel_id = data['channel']
     thread_ts = data['ts']
     user = data['user']
+    logger.info(f"==========> LET US SEE WHAT WHE GOT {user}")
     blocks=read_blocks(text=text, answers=answers, question=question)
+
     try:
         if (ephemeral):
-            response = web_client.chat_postEphemeral(
+            user_id = user['id']
+            username = user['username']
+            response = client.chat_postEphemeral(
                 channel=channel_id,
-                user=user,
+                user=user_id,
                 as_user=False,
                 icon_emoji=":chart_with_upwards_trend:",
                 #text=text,
@@ -409,10 +410,12 @@ def respond(payload, text=None, question=None, answers=[{encode(default_answer):
                 thread_ts=None #thread_ts
             )
         else:  
+            user_id = user
+            username = user
             response = web_client.chat_postMessage(
                 channel=channel_id,
-                as_user=False,
-                user=user,
+                as_user=True,
+                user=user_id,
                 username='kbpro',
                 icon_emoji=":chart_with_upwards_trend:",
                 text=f"Hi <@{user}>! {text}",

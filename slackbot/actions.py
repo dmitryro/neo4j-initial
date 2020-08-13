@@ -39,6 +39,11 @@ def create_mapping(question, original_answer, new_answer):
     except Exception as e:
         logger.error(f"Something went wrong when we were trying to create a mapping - {e}")
 
+
+def auto_slash_command(payload:dict):
+    pass
+
+
 def submit_edited(payload:dict, index:int):
     """ Submite edited answer """
     action_id = payload["view"]["blocks"][1]["accessory"]["action_id"]
@@ -98,9 +103,9 @@ def answer(payload):
     real_answers = read_answers(question)
     user = payload['data']['user']
     message_ts = payload['data']['ts']
-
+     
     if not real_answers:
-        p = Pending(username=f"{user}", real_name=f"{user}", question=question)
+        p = Pending(username=f"{user['id']}", real_name=f"{user['id']}", question=question)
         p.save()
         real_answers = [{encode(default_answer):get_uuid()}]
         ephemeral=True
@@ -118,7 +123,7 @@ def answer(payload):
 
         p = Pending.latest_by_question(question)
         if not p:
-            p = Pending(username=f"{user}", real_name=f"{user}", question=question)
+            p = Pending(username=f"{user['id']}", real_name=f"{user['id']}", question=question)
             p.save()
     answers = []
 
@@ -134,7 +139,7 @@ def answer(payload):
             encmapping = EncodedMapping(question=encode(question), answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
             answers.append({encode(default_answer):encmapping.uuid})           
-
+    logger.info(f"===============> LET US SEE 1 {payload}")
     respond(payload, text=None, question=question, answers=answers,  ephemeral=ephemeral)
  
 
@@ -197,6 +202,10 @@ def preview_answer(payload):
             encmapping = EncodedMapping(question=encode(question), answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
             answers.append({encode(default_answer):encmapping.uuid})
+    logger.info(f"===============> LET US SEE 2 {payload}")
+
+    if isinstance(user, str):
+        payload['data']['user'] = {'id': user, "username": "KBPRO"}
 
     respond(payload, text=preview_answer, question=question, answers=answers, ephemeral=True)
 
@@ -252,10 +261,15 @@ def answer_next(answer:str, uuid:str, user:dict, channel_id:str, trigger_id:str,
     respond_next(answer, uuid, question, answers, user, channel_id, trigger_id, message_ts, index, action=action)
 
 
-def store(payload):
+def store(payload, trim=True):
     """ """
+    user = payload['data']['user']
     try:
-        answer = payload['data']['text'].split(None, 1)[1]
+        if trim:
+            answer = payload['data']['text'].split(None, 1)[1]
+        else:
+            answer = payload['data']['text']
+
         p = Pending.latest()
 
         if p:
@@ -267,8 +281,25 @@ def store(payload):
     except Exception as e:
         logger.error(f"Was unable to store the answer {e}")
         msg = f'Was unable to store a response - pending question not found {e}'
-
+    if isinstance(user, str):
+        payload['data']['user'] = {'id': user, "username": "KBPRO"}
     respond(payload, text=msg, ephemeral=True)
+
+
+def store_slash_command(payload:dict):
+    logger.info(f"LET US PARSE OUR PAYLOAD {payload}")
+    answer = payload['text']
+    user_id = payload['user_id']
+    channel_id = payload['channel_id']
+    username = payload['user_name']
+    trigger_id = payload['trigger_id']
+
+    payload['data'] = {'text':answer,
+                       'ts': None,
+                       'trigger_id': trigger_id,
+                       'channel': channel_id, 
+                       'user':{'id':user_id, 'username':username}}
+    store(payload, trim=False)
 
 def relate(payload):
     """ """
@@ -278,7 +309,6 @@ def relate(payload):
     except Exception as e:
         logger.error(f"Was unable to store the answer {e}")
         msg = f'Was unable to store a response - pending question not found {e}'
-
     respond(payload, text=msg, ephemeral=True)
 
 

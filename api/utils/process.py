@@ -28,6 +28,32 @@ def redis_store(msg, key):
     r.lpush(key, msg)
 
 
+def parse_payload(slack_req_body):
+    params_parsed = {}
+    params = slack_req_body.split("&")
+    for p in params[1:]:
+        item = p.split("=")
+        if len(item) == 2:
+            params_parsed[item[0]] = item[1]
+    return params_parsed
+
+
+def process_slash_command(slack_request: dict):
+    msg = json.dumps(slack_request).encode('utf-8')
+    command = slack_request["command"]
+    text = slack_request["text"]
+    logger.info(f"====> COMMAND WAS {command}")
+
+    if "store" in command:
+        logger.info(f"WE ARE SENDING STORE {msg}")
+        producer.send('store', key=bytes(msg), value=bytes(msg))    
+    elif "auto" in command:
+        producer.send('auto', key=bytes(msg), value=bytes(msg))         
+
+    result = {} 
+    return make_response(jsonify(result), status.HTTP_204_NO_CONTENT)
+
+
 def process_block_actions(slack_request: dict):
     """
     Slack Action processor.
