@@ -21,7 +21,7 @@ CREATE TABLE config(
     id integer NOT NULL DEFAULT nextval('config_id_seq'),
     email varchar(550),
     session_id varchar(550),
-    is_atomatic BOOLEAN DEFAULT FALSE, 
+    is_automatic BOOLEAN DEFAULT FALSE, 
     date_updated timestamptz DEFAULT NOW()    
 );
 

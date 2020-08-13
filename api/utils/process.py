@@ -49,6 +49,12 @@ def process_slash_command(slack_request: dict):
         producer.send('store', key=bytes(msg), value=bytes(msg))    
     elif "auto" in command:
         producer.send('auto', key=bytes(msg), value=bytes(msg))         
+    elif "qa" in command:
+        producer.send('qa', key=bytes(msg), value=bytes(msg)) 
+    elif "pr" in command:
+        producer.send('pr', key=bytes(msg), value=bytes(msg))  
+    elif "jira" in command:
+        producer.send('jira', key=bytes(msg), value=bytes(msg))  
 
     result = {} 
     return make_response(jsonify(result), status.HTTP_204_NO_CONTENT)

@@ -1,15 +1,23 @@
+from collections import defaultdict
 from datetime import datetime
 import logging
-from models import Pending, Mapping, Deletable, Permanent, Channel, EncodedMapping
+from lex import QuestionDetector
+from models import Config, Pending, Mapping, Deletable, Permanent, Channel, EncodedMapping
 from utils import read_answer, read_answers, store_answer, read_question
 from utils import  edit_answer, extend_answer, delete_answer
 from utils import decode, encode, respond, read_env
-from utils import respond_next, delete_ephemeral, get_uuid
+from utils import adjust_time, respond_next, delete_ephemeral, get_uuid
 
+
+detect = QuestionDetector()
 
 logger = logging.getLogger(__name__)
 default_answer = read_env("SLACK_DEFAULT_ANSWER")
-
+onoff = defaultdict(lambda: False)
+onoff['on'] = True
+onoff['off'] = False
+onoff['1'] = True
+onoff['0'] = False
 
 def fetch_question(answer):
     question  = read_question(answer)
@@ -38,10 +46,6 @@ def create_mapping(question, original_answer, new_answer):
             Mapping.update_answer(question, new_answer)
     except Exception as e:
         logger.error(f"Something went wrong when we were trying to create a mapping - {e}")
-
-
-def auto_slash_command(payload:dict):
-    pass
 
 
 def submit_edited(payload:dict, index:int):
@@ -76,7 +80,8 @@ def submit_edited(payload:dict, index:int):
     except Exception as e:
         uuid = get_uuid()
         logger.error("Failed processing permanent {e}")
-
+    if detect.IsTimeQuestion(question):
+        answer = adjust_time(answer)
     EncodedMapping.update_future_answer(uuid, encode(answer))
     answer_next(answer, uuid, user, channel_id, None, message_ts, index, action='confirm')
 
@@ -143,10 +148,14 @@ def answer(payload):
     respond(payload, text=None, question=question, answers=answers,  ephemeral=ephemeral)
  
 
-def prepare_answers(real_answers, message_ts):
+def prepare_answers(question, real_answers, message_ts):
     answers = []
     for answer in real_answers:
         encmapping = EncodedMapping.find_by_answer(encode(answer))
+
+        if detect.IsTimeQuestion(question):
+            answer = adjust_time(answer)
+
         if not encmapping:
             uuid = get_uuid()
             encmapping = EncodedMapping(answer=encode(answer), uuid=uuid, message_ts=message_ts)
@@ -196,7 +205,7 @@ def preview_answer(payload):
         deletable.save()    
     preview_answer=f'Hi admin! The user <@{user}> just asked' 
 
-    answers = prepare_answers(real_answers, message_ts)
+    answers = prepare_answers(question, real_answers, message_ts)
     if len(real_answers) == 0:
             uuid = get_uuid()
             encmapping = EncodedMapping(question=encode(question), answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
@@ -250,14 +259,17 @@ def answer_next(answer:str, uuid:str, user:dict, channel_id:str, trigger_id:str,
         delete_answer(question, answer)
         EncodedMapping.delete_by_answer(encode(answer))
         real_answers = read_answers(question) 
-        answers = prepare_answers(real_answers, message_ts)
+        answers = prepare_answers(question, real_answers, message_ts)
         logger.info(f"Deleted answer {answer} ... {question} ") 
 
     p = Pending.latest_by_question(question)
     if not p:
         p = Pending(username=f"{user}", real_name=f"{user}", question=question)
         p.save()    
-  
+ 
+    if detect.IsTimeQuestion(question):
+        answer = adjust_time(answer)
+ 
     respond_next(answer, uuid, question, answers, user, channel_id, trigger_id, message_ts, index, action=action)
 
 
@@ -286,6 +298,41 @@ def store(payload, trim=True):
     respond(payload, text=msg, ephemeral=True)
 
 
+def auto(payload):
+    text = payload['data']['text']
+
+    config = Config.find_by_id(1)
+
+    if not config:
+        config = Config(email='admin@inf.com', session_id=get_uuid(), 
+                        is_automatic=onoff[text])
+        config.save()
+    else:
+        config.on_off(onoff[text])
+
+
+    msg = f'Automatic mode is set to "{text}"'
+    respond(payload, text=msg, ephemeral=True)
+
+
+def jira(payload):
+    text = payload['data']['text']
+    msg = f'Jira ticket has been created - "{text}"'
+    respond(payload, text=msg, ephemeral=True)
+
+
+def pr(payload):
+    text = payload['data']['text']
+    msg = f'A new pull request has been created - "{text}"'
+    respond(payload, text=msg, ephemeral=True)
+
+
+def qa(payload):
+    text = payload['data']['text']
+    msg = f'A new qa has been created - "{text}"'
+    respond(payload, text=msg, ephemeral=True)
+
+
 def store_slash_command(payload:dict):
     logger.info(f"LET US PARSE OUR PAYLOAD {payload}")
     answer = payload['text']
@@ -300,6 +347,66 @@ def store_slash_command(payload:dict):
                        'channel': channel_id, 
                        'user':{'id':user_id, 'username':username}}
     store(payload, trim=False)
+
+def auto_slash_command(payload:dict):
+    logger.info(f"LET US PARSE OUR PAYLOAD {payload}")
+    text = payload['text']
+    user_id = payload['user_id']
+    channel_id = payload['channel_id']
+    username = payload['user_name']
+    trigger_id = payload['trigger_id']
+
+    payload['data'] = {'text':text,
+                       'ts': None,
+                       'trigger_id': trigger_id,
+                       'channel': channel_id,
+                       'user':{'id':user_id, 'username':username}}
+    auto(payload)
+
+def pr_slash_command(payload:dict):
+    logger.info(f"LET US PARSE OUR PAYLOAD {payload}")
+    text = payload['text']
+    user_id = payload['user_id']
+    channel_id = payload['channel_id']
+    username = payload['user_name']
+    trigger_id = payload['trigger_id']
+
+    payload['data'] = {'text':text,
+                       'ts': None,
+                       'trigger_id': trigger_id,
+                       'channel': channel_id,
+                       'user':{'id':user_id, 'username':username}}
+    pr(payload)
+
+def jira_slash_command(payload:dict):
+    logger.info(f"LET US PARSE OUR PAYLOAD {payload}")
+    text = payload['text']
+    user_id = payload['user_id']
+    channel_id = payload['channel_id']
+    username = payload['user_name']
+    trigger_id = payload['trigger_id']
+
+    payload['data'] = {'text':text,
+                       'ts': None,
+                       'trigger_id': trigger_id,
+                       'channel': channel_id,
+                       'user':{'id':user_id, 'username':username}}
+    jira(payload)
+
+def qa_slash_command(payload:dict):
+    logger.info(f"LET US PARSE OUR PAYLOAD {payload}")
+    text = payload['text']
+    user_id = payload['user_id']
+    channel_id = payload['channel_id']
+    username = payload['user_name']
+    trigger_id = payload['trigger_id']
+
+    payload['data'] = {'text':text,
+                       'ts': None,
+                       'trigger_id': trigger_id,
+                       'channel': channel_id,
+                       'user':{'id':user_id, 'username':username}}
+    qa(payload)
 
 def relate(payload):
     """ """

@@ -16,6 +16,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm.session import sessionmaker
 import tempfile
 from time import sleep
+import datetime
+import pytz
+import re
+
 
 logger = logging.getLogger(__name__)
 read_env = lambda property: os.environ.get(property, None) 
@@ -30,6 +34,14 @@ redis['host'] = read_env('REDIS_HOST')
 redis['port'] = read_env('REDIS_PORT')
 r = RegularStrictRedis(**redis)
 ar = AsyncStrictRedis(**redis)
+
+def adjust_time(old):
+    utc_now = pytz.utc.localize(datetime.datetime.utcnow())
+    est_now = utc_now.astimezone(pytz.timezone("America/New_York"))
+    t1 = est_now.time()
+    t2 = t1.strftime('%Y/%m/%d %I:%M:%S')[11:]
+    news = re.sub(r'\d{1,2}:\d{1,2}', t2, old)
+    return news
 
 def get_uuid():
     shortuuid.set_alphabet("abcdefghijklmnopqrstuvwxyz0123456789")

@@ -22,14 +22,14 @@ class QuestionDetector():
 "didn't","doesn't","haven't","isn't","aren't","can't","couldn't","wouldn't","won't","shouldn't",'?']
         self.Question_Words_Set = set(Question_Words)
         self.tknzr = TweetTokenizer()
-    #Private method, Gets the word vector from sentance
+    #Private method, Gets the word vector from sentence
     def __dialogue_act_features(self,sentence):
          features = {}
          for word in nltk.word_tokenize(sentence):
              features['contains({})'.format(word.lower())] = True
          return features
-    #Public Method, Returns 'True' if sentance is predicted to be a question, returns 'False' otherwise
-    def IsQuestion(self,sentence):
+    #Public Method, Returns 'True' if sentence is predicted to be a question, returns 'False' otherwise
+    def IsQuestion(self, sentence):
         if "?" in sentence:
             return True
         tokens = self.tknzr.tokenize(sentence.lower())
@@ -40,3 +40,10 @@ class QuestionDetector():
             return True
          
         return False
+
+    def IsTimeQuestion(self, sentence):
+        if self.IsQuestion(sentence):
+            if "time" in sentence:
+                return True
+        return False
+        

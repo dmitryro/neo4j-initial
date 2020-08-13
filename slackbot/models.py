@@ -16,7 +16,7 @@ Base = declarative_base()
 
 class Config(Base):
     id = Column(Integer, primary_key=True)
-    is_atomatic = Column(Boolean(), default=False)
+    is_automatic = Column(Boolean(), default=False)
     date_updated = Column(DateTime(timezone=True),
                                    server_default=func.now(),
                                    nullable=True,
@@ -26,7 +26,7 @@ class Config(Base):
 
     __tablename__ = "config"
 
-    def __init__(self, is_atomatic=False,
+    def __init__(self, is_automatic=False,
                        email=None,
                        session_id=None,
                        date_updated=func.now()):
@@ -41,15 +41,25 @@ class Config(Base):
         s.add(self)
         s.commit()
 
+
+    def on_off(self, onoff):
+        """ Mark on or off """
+        s = session.obtain_session()
+        self.date_answered = func.now()
+        query = s.query(Config).filter(Config.id == self.id)
+        query.update({"is_automatic": onoff}, synchronize_session=False)
+        s.commit()
+
+
     @staticmethod
-    def automatic(self, on=False):
+    def automatic(on=False):
         """ Mark as answered """
         s = session.obtain_session()
         query = s.query(Config).filter(Config.id == 1)
         if not query:
             config = Config(is_automatic=False, email='info@gmail.com', session_id = get_uuid())
             config.save()
-        query.update({"is_atomatic": on}, synchronize_session=False)
+        query.update({"is_automatic": on}, synchronize_session=False)
         s.commit()
 
     @staticmethod
