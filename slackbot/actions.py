@@ -19,6 +19,12 @@ onoff['off'] = False
 onoff['1'] = True
 onoff['0'] = False
 
+def is_automatic():
+    config = Config.find_by_id(1)
+    if not config:
+        return False
+    return config.is_automatic
+   
 def fetch_question(answer):
     question  = read_question(answer)
     return question
@@ -163,7 +169,8 @@ def prepare_answers(question, real_answers, message_ts):
         answers.append({encode(answer):encmapping.uuid})
     return answers
 
-def preview_answer(payload):
+
+def automatic_answer(payload):
     """ Answer a slack request """
     question = payload['data']['text']#.split(None, 1)[1]
     real_answers = read_answers(question)
@@ -171,56 +178,104 @@ def preview_answer(payload):
     message_ts = payload['data']['ts']
     question_compressed = encode(question)
     channel_id = payload['data']['channel']
+    encmapping = EncodedMapping.find_by_question(question_compressed)
 
-    p = Pending(username=f"{user}", real_name=f"{user}", question=question)
-    p.save()
-
-    if len(real_answers) == 0:
-        key = encode(default_answer)
-        value = get_uuid()
-        ans = {}
-        ans[key] = value
-        answers =  [ans]
-        ephemeral=True
+    if isinstance(user, dict):
+        user_id = user['id']
+        username = user['username']
     else:
-        ephemeral=False
-        mapping = Mapping.find_by_question(question)
-        if mapping:
-            mapping.compressed_answer = encode(real_answers[0])
-            mapping.update()
+        user_id = user
+        username = user
 
+    p = Pending.latest_by_question(question)
+    if not p:
+        p = Pending(username=f"{username}", real_name=f"{username}", question=question)
+        p.save()
+
+    if not encmapping:
+        if len(real_answers) == 0:
+            answer = default_answer
         else:
-            mapping = Mapping(answer_compressed=str(encode(real_answers[0])),
-                              question_compressed=str(encode(question)), version=0.01)
-            mapping.save()
-
-        p = Pending.latest_by_question(question)
-
-    if len(real_answers):
-        answer_compressed = encode(real_answers[0])
-        deletable = Deletable(question_compressed=question_compressed, 
-                              answer_compressed=answer_compressed,
-                              channel_id=channel_id,
-                              message_ts=message_ts)
-        deletable.save()   
-    
-    if isinstance(user, dict): 
-         user_id = user['id']
-         preview_answer=f'Hi admin! The user <@{user_id}> just asked' 
+            answer = real_answers[0]
+        uuid = get_uuid()
+        message_ts = None
+        encmapping = EncodedMapping(question=encode(question), answer=encode(answer), uuid=uuid, message_ts=message_ts)
+        encmapping.save()
     else:
-         preview_answer=f'Hi admin! The user <@{user}> just asked'
+        if len(real_answers) > 0:
+            EncodedMapping.update_by_question(encode(question), encode(real_answers[0]))            
+            answer = real_answers[0]
+        else:
+            answer = decode(encmapping.answer)
 
-    answers = prepare_answers(question, real_answers, message_ts)
-    if len(real_answers) == 0:
+    if detect.IsTimeQuestion(question):
+        answer = adjust_time(answer)
+
+    respond(payload, text=answer, question=question, answers=[], ephemeral=False)
+
+
+def preview_answer(payload):
+    """ Answer a slack request """
+    if is_automatic():
+        automatic_answer(payload)
+    else: 
+        question = payload['data']['text']#.split(None, 1)[1]
+        real_answers = read_answers(question)
+        user = payload['data']['user']
+        message_ts = payload['data']['ts']
+        question_compressed = encode(question)
+        channel_id = payload['data']['channel']
+
+        p = Pending(username=f"{user}", real_name=f"{user}", question=question)
+        p.save()
+
+        if len(real_answers) == 0:
+            key = encode(default_answer)
+            value = get_uuid()
+            ans = {}
+            ans[key] = value
+            answers =  [ans]
+            ephemeral=True
+        else:
+            ephemeral=False
+            mapping = Mapping.find_by_question(question)
+
+            if mapping:
+                mapping.compressed_answer = encode(real_answers[0])
+                mapping.update()
+
+            else:
+                mapping = Mapping(answer_compressed=str(encode(real_answers[0])),
+                                  question_compressed=str(encode(question)), version=0.01)
+                mapping.save()
+
+            p = Pending.latest_by_question(question)
+
+        if len(real_answers):
+            answer_compressed = encode(real_answers[0])
+            deletable = Deletable(question_compressed=question_compressed, 
+                                  answer_compressed=answer_compressed,
+                                  channel_id=channel_id,
+                                  message_ts=message_ts)
+            deletable.save()   
+    
+        if isinstance(user, dict): 
+            user_id = user['id']
+            preview_answer=f'Hi admin! The user <@{user_id}> just asked' 
+        else:
+            preview_answer=f'Hi admin! The user <@{user}> just asked'
+
+        answers = prepare_answers(question, real_answers, message_ts)
+        if len(real_answers) == 0:
             uuid = get_uuid()
             encmapping = EncodedMapping(question=encode(question), answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
             answers.append({encode(default_answer):encmapping.uuid})
 
-    if isinstance(user, str):
-        payload['data']['user'] = {'id': user, "username": "KBPRO"}
+        if isinstance(user, str):
+            payload['data']['user'] = {'id': user, "username": "KBPRO"}
 
-    respond(payload, text=preview_answer, question=question, answers=answers, ephemeral=True)
+        respond(payload, text=preview_answer, question=question, answers=answers, ephemeral=True)
 
 
 def make_nonpermanent(payload:dict):
@@ -425,7 +480,10 @@ def answer_slash_command(payload:dict):
                        'trigger_id': trigger_id,
                        'channel': channel_id,
                        'user':{'id':user_id, 'username':username}}
-    preview_answer(payload)
+    if is_automatic():
+        automatic_answer(payload)
+    else:
+        preview_answer(payload)
 
 
 def relate(payload):

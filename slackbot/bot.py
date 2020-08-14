@@ -65,20 +65,15 @@ class Bot(metaclass=SingletonMeta):
             sentence = data['text']#.split(None, 1)[1]
 
             if 'store' == data['text'].split(None, 1)[0]:
-                logger.info(f"===> CASE 1 - sending store - {sentence}")
                 store(payload)
             
             elif 'answer' == data['text'].split(None, 1)[0]: 
-                logger.info(f"===> CASE 2 - sending answer - {sentence}")
                 preview_answer(payload)
 
             elif 'edit' == data['text'].split(None, 1)[0]:
-                logger.info(f"===> CASE 3 - sending edit - {sentence}")
                 edit(payload)
             else:
-                logger.info(f"CASE 4.1 ==== {sentence} before the check")
                 if detect.IsQuestion(sentence):
-                    logger.info(f"===> CASE 4 - sending answer- - {sentence}")
                     preview_answer(payload)
             #else:
             #    logger.info(f"===> CASE 5 - Miscelaneous - sending - {sentence}")

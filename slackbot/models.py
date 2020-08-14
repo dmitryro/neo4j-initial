@@ -181,6 +181,13 @@ class EncodedMapping(Base):
         s.commit()
         return m
 
+    @staticmethod
+    def update_by_question(question, answer):
+        """ Mark as answered """
+        s = session.obtain_session()
+        query = s.query(EncodedMapping).filter(EncodedMapping.question == question)
+        query.update({"answer": answer}, synchronize_session=False)
+        s.commit()
 
 class Question(Base):
     id = Column(Integer, primary_key=True)

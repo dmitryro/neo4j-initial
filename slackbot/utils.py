@@ -36,10 +36,13 @@ r = RegularStrictRedis(**redis)
 ar = AsyncStrictRedis(**redis)
 
 def adjust_time(old):
+    old = re.sub('AM|PM', '', old)
+    old = re.sub(' EST', 'EST', old)
     utc_now = pytz.utc.localize(datetime.datetime.utcnow())
     est_now = utc_now.astimezone(pytz.timezone("America/New_York"))
+    print(est_now)
     t1 = est_now.time()
-    t2 = t1.strftime('%Y/%m/%d %I:%M:%S')[11:]
+    t2 = t1.strftime('%Y/%m/%d %I:%M:%S %p')[11:]
     news = re.sub(r'\d{1,2}:\d{1,2}', t2, old)
     return news
 
@@ -404,7 +407,6 @@ def respond(payload, text=None, question=None, answers=[{encode(default_answer):
     channel_id = data['channel']
     thread_ts = data['ts']
     user = data['user']
-    logger.info(f"==========> LET US SEE WHAT WHE GOT {user}")
     blocks=read_blocks(text=text, answers=answers, question=question)
 
     try:
@@ -422,15 +424,20 @@ def respond(payload, text=None, question=None, answers=[{encode(default_answer):
                 thread_ts=None #thread_ts
             )
         else:  
-            user_id = user
-            username = user
-            response = web_client.chat_postMessage(
+            if isinstance(user, dict):
+                user_id = user['id']
+                username = user['username']
+            else:
+                user_id = user
+                username = user
+
+            response = client.chat_postMessage(
                 channel=channel_id,
                 as_user=True,
                 user=user_id,
                 username='kbpro',
                 icon_emoji=":chart_with_upwards_trend:",
-                text=f"Hi <@{user}>! {text}",
+                text=f"Hi <@{user_id}>! {text}",
                 thread_ts=None #thread_ts
             )
     except SlackApiError as e:
