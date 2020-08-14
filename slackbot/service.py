@@ -8,7 +8,7 @@ from utils import read_env, read_approved
 from actions import answer_next_with_uuid, submit_edited, make_permanent
 from actions import answer_next_with_uuid_and_answer
 from actions import record_channel, make_nonpermanent
-from actions import auto_slash_command, store_slash_command
+from actions import auto_slash_command, answer_slash_command, store_slash_command
 from actions import pr_slash_command, qa_slash_command, jira_slash_command
 from bot import bot
 from time import sleep
@@ -27,6 +27,7 @@ auto_topic =  app.topic("auto")
 jira_topic = app.topic("jira")
 pr_topic = app.topic("pr")
 qa_topic = app.topic("qa")
+answer_topic = app.topic("answer")
 submit_edited_topic = app.topic("submit_edited")
 answers_table = app.Table("answers", default=str)
 questions_table = app.Table("questions", default=str)
@@ -85,6 +86,12 @@ async def process_qa_channel(qas) -> None:
 async def process_pr_channel(prs) -> None:
     async for payload in prs:
         pr_slash_command(payload)
+
+
+@app.agent(answer_topic)
+async def process_answer_channel(answers) -> None:
+    async for payload in answers:
+        answer_slash_command(payload)
 
 
 @app.agent(record_channel_topic)

@@ -202,8 +202,13 @@ def preview_answer(payload):
                               answer_compressed=answer_compressed,
                               channel_id=channel_id,
                               message_ts=message_ts)
-        deletable.save()    
-    preview_answer=f'Hi admin! The user <@{user}> just asked' 
+        deletable.save()   
+    
+    if isinstance(user, dict): 
+         user_id = user['id']
+         preview_answer=f'Hi admin! The user <@{user_id}> just asked' 
+    else:
+         preview_answer=f'Hi admin! The user <@{user}> just asked'
 
     answers = prepare_answers(question, real_answers, message_ts)
     if len(real_answers) == 0:
@@ -211,7 +216,6 @@ def preview_answer(payload):
             encmapping = EncodedMapping(question=encode(question), answer=encode(default_answer), uuid=uuid, message_ts=message_ts)
             encmapping.save()
             answers.append({encode(default_answer):encmapping.uuid})
-    logger.info(f"===============> LET US SEE 2 {payload}")
 
     if isinstance(user, str):
         payload['data']['user'] = {'id': user, "username": "KBPRO"}
@@ -407,6 +411,22 @@ def qa_slash_command(payload:dict):
                        'channel': channel_id,
                        'user':{'id':user_id, 'username':username}}
     qa(payload)
+
+
+def answer_slash_command(payload:dict):
+    text = payload['text']
+    user_id = payload['user_id']
+    channel_id = payload['channel_id']
+    username = payload['user_name']
+    trigger_id = payload['trigger_id']
+
+    payload['data'] = {'text':text,
+                       'ts': None,
+                       'trigger_id': trigger_id,
+                       'channel': channel_id,
+                       'user':{'id':user_id, 'username':username}}
+    preview_answer(payload)
+
 
 def relate(payload):
     """ """

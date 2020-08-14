@@ -88,6 +88,40 @@ def slack_store():
 
 
 
+@slack_blueprint.route("/api/answer", methods=['POST'])
+def slack_answer():
+    """
+    Process action
+    ---
+    tags:
+      - Actions
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+    responses:
+      200:
+        description: Site created
+      400:
+        description: Bad Request (the posted data was not valid)
+    """
+    try:
+        data = request.get_data(as_text=True)
+        # action body
+        slack_req_body = parse.unquote_plus(data)
+        params_parsed = parse_payload(slack_req_body)
+        response = process_slash_command(params_parsed)
+        return response
+    except Exception as e:
+        logger.exception(f"Answer problem {e}")
+        logger.error(f"Answer problem  - {e}")
+        result = {"result": "failure"}
+        return make_response(jsonify(result), status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @slack_blueprint.route("/api/store/<string:text>", methods=['GET'])
 def store_action(text):

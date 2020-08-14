@@ -42,11 +42,11 @@ def process_slash_command(slack_request: dict):
     msg = json.dumps(slack_request).encode('utf-8')
     command = slack_request["command"]
     text = slack_request["text"]
-    logger.info(f"====> COMMAND WAS {command}")
 
     if "store" in command:
-        logger.info(f"WE ARE SENDING STORE {msg}")
         producer.send('store', key=bytes(msg), value=bytes(msg))    
+    elif "answer" in command:
+        producer.send('answer', key=bytes(msg), value=bytes(msg))
     elif "auto" in command:
         producer.send('auto', key=bytes(msg), value=bytes(msg))         
     elif "qa" in command:
